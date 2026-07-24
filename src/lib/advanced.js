@@ -455,7 +455,22 @@ export function calcWS(p, team, puntosRival, totalJuegos) {
   return {
     ws:   round(WS, 3),
     ws40: round(WS40, 3),
+    dws:  round(DWS, 3),
+    ows:  round(OWS, 3),
   }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 13b. PF/40 — Faltas personales por 40 minutos
+//      Fórmula: FP / MIN * 40
+//      Dato exacto, no requiere estimación: cuantas más faltas por 40 min,
+//      más "indisciplinado" defensivamente (o más agresivo) es el jugador.
+// ────────────────────────────────────────────────────────────────────────────
+export function calcPF40(p) {
+  const mp = p.min || 0
+  const pf = p.fp  || 0
+  if (mp === 0) return null
+  return round((pf / mp) * 40, 1)
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -620,7 +635,8 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
   const drtg = calcDRTG(p, team, puntosRival)
   const nrtg = calcNetRating(ortg, drtg)
   const bpm  = calcBPM(p)
-  const { ws, ws40 } = calcWS(p, team, puntosRival)
+  const { ws, ws40, dws, ows } = calcWS(p, team, puntosRival)
+  const pf40 = calcPF40(p)
   const epm  = calcEPM(p)
   const raptor = calcRAPTOR(p, team)
   const lebron = calcLEBRON(p, team)
@@ -655,6 +671,9 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
     bpm,
     ws,
     ws40,
+    dws,
+    ows,
+    pf40,
     // Métricas propietarias aproximadas
     epm:     epm?.epm     ?? null,
     oepm:    epm?.oepm    ?? null,

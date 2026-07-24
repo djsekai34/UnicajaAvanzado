@@ -36,7 +36,10 @@ const ADV_METRICS = [
   { key:'per',       label:'PER',    desc:'Player Efficiency Rating', fmt: v => v!=null?v:'—',                 type:'rating' },
   { key:'bpm',       label:'BPM',    desc:'Box Plus/Minus',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'ws',        label:'WS',     desc:'Win Shares',              fmt: v => v!=null?v:'—',                  type:'rating' },
+  { key:'ows',       label:'OWS',    desc:'Offensive Win Shares',    fmt: v => v!=null?v:'—',                  type:'rating' },
+  { key:'dws',       label:'DWS',    desc:'Defensive Win Shares',    fmt: v => v!=null?v:'—',                  type:'rating' },
   { key:'ws40',      label:'WS/40',  desc:'Win Shares por 40 min',   fmt: v => v!=null?v:'—',                  type:'rating' },
+  { key:'pf40',      label:'FP/40',  desc:'Faltas personales por 40 min', fmt: v => v!=null?v:'—',             type:'rating' },
   { key:'ortg',      label:'ORTG',   desc:'Offensive Rating',        fmt: v => v!=null?v:'—',                  type:'rating' },
   { key:'drtg',      label:'DRTG',   desc:'Defensive Rating',        fmt: v => v!=null?v:'—',                  type:'rating' },
   { key:'net_rating',label:'NRTG',   desc:'Net Rating',              fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
@@ -185,7 +188,18 @@ export default function JugadorPage() {
               }
             </div>
             <div>
-              <div style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700 }}>{jugador.nombre}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                <div style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700 }}>{jugador.nombre}</div>
+                {jugador.es_cupo && (
+                  <span className="badge badge-super" title="Jugador de cupo" style={{ gap: 6 }}>
+                    <svg width="16" height="11" viewBox="0 0 3 2" style={{ borderRadius: 2, flexShrink: 0 }}>
+                      <rect width="3" height="2" fill="#AA151B" />
+                      <rect y="0.5" width="3" height="1" fill="#F1BF00" />
+                    </svg>
+                    Cupo
+                  </span>
+                )}
+              </div>
               <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
                 <span className="pos-pill">{jugador.posicion}</span>
                 <span style={{ fontSize:13, color:'var(--gris-500)' }}>{jugador.nacionalidad}</span>
@@ -208,6 +222,23 @@ export default function JugadorPage() {
             </div>
           </div>
         </div>
+        {!jugador.activo && (
+          <div style={{
+            marginTop: 20,
+            padding: '12px 16px',
+            borderRadius: 'var(--radius)',
+            background: 'rgba(230, 80, 60, 0.12)',
+            border: '1px solid rgba(230, 80, 60, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: '#e8917f' }}>
+              Este jugador ya no pertenece a la plantilla actual. Podrás ver las estadísticas de los {n} partido{n === 1 ? '' : 's'} que ha jugado en la temporada {jugador.temporadas?.nombre}.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Filtro competición */}

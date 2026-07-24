@@ -32,6 +32,8 @@ const ADV_COLS = [
   { key: 'per',      label: 'PER',     desc: 'Player Efficiency Rating', fmt: v => v != null ? v : '—', type: 'rating' },
   { key: 'bpm',      label: 'BPM',     desc: 'Box Plus/Minus',         fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'ws',       label: 'WS',      desc: 'Win Shares',             fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'ows',      label: 'OWS',     desc: 'Offensive Win Shares (parte ofensiva de las Win Shares)', fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'dws',      label: 'DWS',     desc: 'Defensive Win Shares (parte defensiva de las Win Shares)', fmt: v => v != null ? v : '—', type: 'rating' },
   { key: 'ws40',     label: 'WS/40',   desc: 'Win Shares por 40 min',  fmt: v => v != null ? v : '—', type: 'rating' },
   { key: 'ortg',     label: 'ORTG',    desc: 'Offensive Rating',       fmt: v => v != null ? v : '—', type: 'rating' },
   { key: 'drtg',     label: 'DRTG',    desc: 'Defensive Rating',       fmt: v => v != null ? v : '—', type: 'rating' },
@@ -42,6 +44,7 @@ const ADV_COLS = [
   { key: 'dreb_pct', label: 'DREB%',   desc: 'Defensive Rebound %',    fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'tov_pct',  label: 'TOV%',    desc: 'Turnover %',             fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'ast_to',   label: 'AST/TO',  desc: 'Asistencias/Pérdidas',   fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'pf40',     label: 'FP/40',   desc: 'Faltas personales por 40 min', fmt: v => v != null ? v : '—', type: 'rating' },
   { key: 'epm',      label: 'EPM',     desc: 'Estimated Plus/Minus',   fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'raptor',   label: 'RAPTOR',  desc: 'RAPTOR (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'lebron',   label: 'LEBRON',  desc: 'LEBRON (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
@@ -60,6 +63,12 @@ function slugify(nombre) {
 
 function rnd(v, d=1) { return v != null ? Math.round(v*10**d)/10**d : null }
 function fmtVal(v) { if (v == null) return '—'; return rnd(v) }
+
+// Añade un pequeño indicativo al nombre mostrado en leyendas/ejes de las
+// gráficas cuando el jugador ya no pertenece a la plantilla actual.
+function displayNombre(jugador, label) {
+  return jugador && jugador.activo === false ? `${label} ⚠️` : label
+}
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -95,6 +104,7 @@ const STAT_OPTS = [
 export default function EstadisticasPage() {
   const data = usePublicData()
   const [tab, setTab] = useState('basicas')
+  const [warnMsg, setWarnMsg] = useState(null)
   const [sortCol, setSortCol] = useState('pts')
   const [sortDir, setSortDir] = useState(1)
   const [chartMetric, setChartMetric] = useState('pts')
@@ -103,6 +113,7 @@ export default function EstadisticasPage() {
   const [evoMetrics, setEvoMetrics] = useState(['val']) // métricas elegidas en modo "todos"
 
   const { promediosPorJugador, jugadoresSeleccionados, partidosFiltrados, loading } = data
+  const temporadaNombre = data.temporadas?.find(t => String(t.id) === String(data.temporadaId))?.nombre
 
   const rows = useMemo(() => {
     return jugadoresSeleccionados
@@ -216,13 +227,14 @@ export default function EstadisticasPage() {
   const radarDisplayName = (r, i) => {
     const base = primerosNombresRadar[i]
     const repetido = primerosNombresRadar.filter(n => n === base).length > 1
-    return repetido ? `${base} #${r.jugador.dorsal}` : base
+    const label = repetido ? `${base} #${r.jugador.dorsal}` : base
+    return displayNombre(r.jugador, label)
   }
 
   // Scatter "chulo": Eficiencia (TS%) vs Volumen (USG%), tamaño = Valoración
   const scatterData = useMemo(() => {
     return rows.map(r => ({
-      nombre: r.jugador.nombre.split(' ')[0],
+      nombre: displayNombre(r.jugador, r.jugador.nombre.split(' ')[0]),
       x: r.advanced?.usg_pct ?? 0,
       y: r.advanced?.ts_pct ?? 0,
       z: Math.max(r.val ?? 1, 1),
@@ -250,7 +262,7 @@ export default function EstadisticasPage() {
               return (
                 <Line key={jid} type="monotone"
                   dataKey={(row) => row[nombre]?.[metric] ?? null}
-                  name={nombre}
+                  name={displayNombre(d.jugador, nombre)}
                   stroke={COLORS[i % COLORS.length]}
                   strokeWidth={2} dot={{ r:3 }} activeDot={{ r:5 }}
                   connectNulls />
@@ -271,7 +283,7 @@ export default function EstadisticasPage() {
         <ResponsiveContainer width="100%" height={240}>
           <BarChart
             data={rows.map(r => ({
-              nombre: r.jugador.nombre.split(' ')[0],
+              nombre: displayNombre(r.jugador, r.jugador.nombre.split(' ')[0]),
               valor: r[metric] ?? r.stats?.[metric] ?? 0
             }))}
             margin={{ top:5, right:10, left:0, bottom:30 }}
@@ -361,6 +373,17 @@ export default function EstadisticasPage() {
                             <div style={{ fontWeight:600, color:'var(--blanco)' }}>{r.jugador.nombre}</div>
                             <div style={{ fontSize:11, color:'var(--gris-500)' }}>{r.jugador.posicion}</div>
                           </div>
+                          {!r.jugador.activo && (
+                            <span
+                              className="warn-tooltip"
+                              onClick={() => setWarnMsg(`Este jugador ya no pertenece a la plantilla de la temporada ${temporadaNombre || 'actual'}.`)}
+                            >
+                              ⚠️
+                              <span className="warn-tooltip-box">
+                                Este jugador ya no pertenece a la plantilla de la temporada {temporadaNombre || 'actual'}.
+                              </span>
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="num">{r.partidos}</td>
@@ -413,6 +436,17 @@ export default function EstadisticasPage() {
                         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                           <span style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'var(--verde)', fontSize:13 }}>#{r.jugador.dorsal}</span>
                           <span style={{ fontWeight:600, color:'var(--blanco)' }}>{r.jugador.nombre}</span>
+                          {!r.jugador.activo && (
+                            <span
+                              className="warn-tooltip"
+                              onClick={() => setWarnMsg(`Este jugador ya no pertenece a la plantilla de la temporada ${temporadaNombre || 'actual'}.`)}
+                            >
+                              ⚠️
+                              <span className="warn-tooltip-box">
+                                Este jugador ya no pertenece a la plantilla de la temporada {temporadaNombre || 'actual'}.
+                              </span>
+                            </span>
+                          )}
                         </div>
                       </td>
                       {ADV_COLS.map(c => {
@@ -435,6 +469,11 @@ export default function EstadisticasPage() {
               <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--gris-800)', borderLeft: '3px solid #60A5FA', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--gris-400)', lineHeight: 1.6 }}>
                 <span style={{ color: 'var(--blanco)', fontWeight: 700 }}>Visualización de datos</span> — elige dos métricas para comparar su evolución partido a partido y sus promedios. Activa <span style={{ color: '#60A5FA' }}>Evaluar todos los apartados</span> para ver una visión global de todas las estadísticas a la vez.
               </div>
+              {jugadoresSeleccionados.some(jid => promediosPorJugador[jid]?.jugador?.activo === false) && (
+                <div style={{ marginBottom: 16, padding: '10px 16px', background: 'rgba(230, 80, 60, 0.1)', border: '1px solid rgba(230, 80, 60, 0.3)', borderRadius: 'var(--radius)', fontSize: 12.5, color: '#e8917f' }}>
+                  ⚠️ = jugador que ya no pertenece a la plantilla actual.
+                </div>
+              )}
               {/* Controles de métrica */}
               <div style={{ display:'flex', gap:16, marginBottom:16, flexWrap:'wrap', alignItems:'flex-end' }}>
                 <label style={{
@@ -511,7 +550,7 @@ export default function EstadisticasPage() {
                             const d = promediosPorJugador[jid]
                             if (!d) return null
                             const nombre = d.jugador?.nombre?.split(' ')[0] || String(jid)
-                            return <Bar key={jid} dataKey={nombre} name={nombre} fill={COLORS[i % COLORS.length]} radius={[4,4,0,0]} />
+                            return <Bar key={jid} dataKey={nombre} name={displayNombre(d.jugador, nombre)} fill={COLORS[i % COLORS.length]} radius={[4,4,0,0]} />
                           })}
                         </BarChart>
                       </ResponsiveContainer>
@@ -604,6 +643,9 @@ export default function EstadisticasPage() {
                   { label: 'OREB% — Offensive Rebound %', formula: 'Igual que REB% pero solo rebotes ofensivos', desc: 'Indica qué tan activo es el jugador en la búsqueda de segundas opciones ofensivas.' },
                   { label: 'DREB% — Defensive Rebound %', formula: 'Igual que REB% pero solo rebotes defensivos', desc: 'Un pívot de élite suele estar entre 20-30%.' },
                 ]},
+                { grupo: 'Faltas y disciplina', items: [
+                  { label: 'FP/40 — Faltas personales por 40 min', formula: 'FP / Minutos × 40', desc: 'Ritmo de faltas normalizado a 40 minutos, para comparar jugadores con distinto tiempo de juego. Un valor alto puede indicar un defensor agresivo o con problemas de disciplina; en pívots interiores suele ser algo más alto que en exteriores.' },
+                ]},
                 { grupo: 'Ratings y eficiencia global', items: [
                   { label: 'PER — Player Efficiency Rating', formula: 'Fórmula Hollinger completa normalizada a media 15', desc: 'La métrica histórica de Hollinger. Intenta resumir toda la contribución de un jugador en un solo número. Media de liga = 15. Por encima de 20 es All-Star, por encima de 25 es MVP.' },
                   { label: 'ORTG — Offensive Rating', formula: 'Puntos producidos individuales / posesiones × 100', desc: 'Puntos que produce el jugador por cada 100 posesiones individuales. La media de liga está en torno a 105.' },
@@ -613,6 +655,8 @@ export default function EstadisticasPage() {
                 ]},
                 { grupo: 'Win Shares', items: [
                   { label: 'WS — Win Shares', formula: 'Basado en puntos producidos y stops individuales (Oliver)', desc: 'Estimación de victorias que ha aportado el jugador al equipo. Un buen titular suele aportar 5-8 WS por temporada.' },
+                  { label: 'OWS — Offensive Win Shares', formula: 'Parte ofensiva de las WS, basada en puntos producidos por encima del margen de posesión', desc: 'Cuánto de esas victorias aportadas viene de la anotación y creación de juego del jugador.' },
+                  { label: 'DWS — Defensive Win Shares', formula: 'Parte defensiva de las WS, basada en robos, tapones y rebotes defensivos', desc: 'Cuánto de esas victorias aportadas viene de la contribución defensiva del jugador (robos, tapones, rebotes defensivos), en vez de la anotación.' },
                   { label: 'WS/40 — Win Shares por 40 min', formula: 'WS / Minutos × 40', desc: 'WS normalizado a 40 minutos para comparar jugadores con distinto tiempo de juego. Media de liga ≈ 0.100. Por encima de 0.200 es excelente.' },
                 ]},
                 { grupo: 'Métricas de impacto (aproximadas)', items: [
@@ -642,6 +686,20 @@ export default function EstadisticasPage() {
             </>
           )}
         </>
+      )}
+
+      {warnMsg && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setWarnMsg(null)}>
+          <div className="modal" style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h3 style={{ fontSize: 15 }}>⚠️ Aviso</h3>
+              <button className="btn-close" onClick={() => setWarnMsg(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--gris-300)', lineHeight: 1.6 }}>{warnMsg}</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

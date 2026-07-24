@@ -186,6 +186,50 @@ select option { background: var(--gris-900); }
 .jugador-chip.selected { border-color: var(--verde); background: rgba(78,158,71,.15); color: var(--blanco); }
 .jugador-chip .dorsal { font-family: var(--font-display); font-weight: 700; color: var(--verde); font-size: 12px; }
 
+/* ─── WARNING TOOLTIP ───────────────────────────────────────────────────── */
+.warn-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+.warn-tooltip-box {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gris-800);
+  border: 1px solid rgba(230, 80, 60, 0.4);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blanco);
+  white-space: normal;
+  width: max-content;
+  max-width: 220px;
+  line-height: 1.5;
+  box-shadow: 0 8px 20px rgba(0,0,0,.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .12s, visibility .12s;
+  z-index: 20;
+  text-align: left;
+}
+.warn-tooltip-box::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--gris-800);
+}
+.warn-tooltip:hover .warn-tooltip-box {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* ─── TABS ──────────────────────────────────────────────────────────────── */
 .tabs {
   display: flex;
@@ -429,6 +473,11 @@ input::placeholder { color: var(--gris-500); }
   .adv-card .adv-value { font-size: 20px; }
 
   th, td { padding: 9px 10px; font-size: 12px; }
+
+  /* En táctil el hover no es fiable y el tooltip flotante se recorta
+     dentro del scroll de la tabla, así que se apoya en el modal (tap). */
+  .warn-tooltip { cursor: pointer; }
+  .warn-tooltip-box { display: none; }
 
   .compare-row { flex-direction: column; align-items: flex-stretch; gap: 8px; padding: 14px; }
   .compare-label { min-width: 0; }
