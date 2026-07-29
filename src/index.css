@@ -145,8 +145,7 @@ img, svg, table { max-width: 100%; }
 }
 .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 140px; }
 .filter-group label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--gris-500); }
-.filter-group select,
-.filter-group input[type="date"] {
+.filter-group select {
   background: var(--negro);
   border: 1px solid var(--gris-700);
   border-radius: var(--radius);
@@ -159,6 +158,28 @@ img, svg, table { max-width: 100%; }
   transition: border-color .15s;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
+}
+.filter-group input[type="date"] {
+  background: var(--negro);
+  border: 1px solid var(--gris-700);
+  border-radius: var(--radius);
+  color: var(--blanco);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px 10px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+  display: block;
+  /* Truco para el bug de iOS Safari: el control nativo de fecha ignora
+     width:100% y pinta su propio ancho interno (día/mes/año + icono).
+     Forzando width a algo mínimo, el navegador usa min-width como el
+     tamaño real a aplicar, y así sí respeta el contenedor. */
+  width: 1px;
+  min-width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .filter-group select:focus,
 .filter-group input:focus { border-color: var(--verde); }
