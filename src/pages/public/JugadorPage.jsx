@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { supabase } from '../../lib/supabase'
 import { calcAllAdvanced, calcTeamTotals } from '../../lib/advanced'
+import AniversarioBadge from '../../components/public/AniversarioBadge'
 
 const COLORS = ['#4E9E47','#9DC41A','#60A5FA','#F59E0B']
 
@@ -167,9 +168,12 @@ export default function JugadorPage() {
 
   return (
     <div>
-      <Link to="/" style={{ color:'var(--gris-500)', fontSize:13, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4, marginBottom:20 }}>
-        ← Volver a estadísticas
-      </Link>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, marginBottom:20, flexWrap:'wrap' }}>
+        <Link to="/" style={{ color:'var(--gris-500)', fontSize:13, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
+          ← Volver a estadísticas
+        </Link>
+        <AniversarioBadge temporadaNombre={jugador.temporadas?.nombre} />
+      </div>
 
       {/* Header jugador */}
       <div className="card" style={{ marginBottom:28 }}>

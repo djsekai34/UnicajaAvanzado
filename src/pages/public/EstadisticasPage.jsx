@@ -7,6 +7,7 @@ import {
 } from 'recharts'
 import { usePublicData } from '../../hooks/usePublicData'
 import FiltrosBar from '../../components/public/FiltrosBar'
+import AniversarioBadge from '../../components/public/AniversarioBadge'
 
 const BASIC_COLS = [
   { key: 'partidos', label: 'PJ', desc: 'Partidos jugados' },
@@ -311,12 +312,15 @@ export default function EstadisticasPage() {
   return (
     <div>
       <div className="page-header">
-        <h2>Estadísticas</h2>
-        <p>
-          {data.partidosFiltrados.length} partidos
-          {data.mes !== 'todos' && ` · ${['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][Number(data.mes)]}`}
-          {data.compId !== 'todas' && ` · ${data.competiciones.find(c=>String(c.id)===data.compId)?.nombre}`}
-        </p>
+        <div>
+          <h2>Estadísticas</h2>
+          <p>
+            {data.partidosFiltrados.length} partidos
+            {data.mes !== 'todos' && ` · ${['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][Number(data.mes)]}`}
+            {data.compId !== 'todas' && ` · ${data.competiciones.find(c=>String(c.id)===data.compId)?.nombre}`}
+          </p>
+        </div>
+        <AniversarioBadge temporadaNombre={temporadaNombre} />
       </div>
 
       <FiltrosBar {...data} />

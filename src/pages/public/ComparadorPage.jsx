@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { usePublicData } from '../../hooks/usePublicData'
 import FiltrosBar from '../../components/public/FiltrosBar'
+import AniversarioBadge from '../../components/public/AniversarioBadge'
 
 const COLORS = ['#4E9E47','#9DC41A','#60A5FA','#F59E0B']
 
@@ -49,6 +50,7 @@ const CustomTooltip = ({ active, payload }) => {
 export default function ComparadorPage() {
   const data = usePublicData()
   const { promediosPorJugador, jugadoresSeleccionados, jugadores, loading } = data
+  const temporadaNombre = data.temporadas?.find(t => String(t.id) === String(data.temporadaId))?.nombre
   const [seleccionados, setSeleccionados] = useState([])
 
   const toggleSel = (id) => {
@@ -97,8 +99,11 @@ export default function ComparadorPage() {
   return (
     <div>
       <div className="page-header">
-        <h2>Comparador</h2>
-        <p>Selecciona hasta 4 jugadores para comparar</p>
+        <div>
+          <h2>Comparador</h2>
+          <p>Selecciona hasta 4 jugadores para comparar</p>
+        </div>
+        <AniversarioBadge temporadaNombre={temporadaNombre} />
       </div>
 
       <FiltrosBar {...data} />
@@ -138,13 +143,11 @@ export default function ComparadorPage() {
       ) : (
         <>
           {/* Header con nombres */}
-          <div style={{
-            display:'grid',
-            gridTemplateColumns:`200px repeat(${jugadoresComp.length}, 1fr)`,
-            gap:12,
-            marginBottom:16,
-          }}>
-            <div />
+          <div
+            className="compare-header-grid"
+            style={{ '--cols': jugadoresComp.length, gap: 12, marginBottom: 16 }}
+          >
+            <div className="compare-header-placeholder" />
             {jugadoresComp.map((d, i) => (
               <div key={d.jugador.id} style={{
                 background:'var(--gris-800)',
