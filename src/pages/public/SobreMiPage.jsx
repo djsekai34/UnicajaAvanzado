@@ -4,7 +4,7 @@ import { useEffect } from "react";
 const STATS_PROYECTO = [
   { label: "Competiciones cubiertas", value: "5" },
   { label: "Métricas avanzadas", value: "20+" },
-  { label: "Jugadores analizados", value: "14" },
+  { label: "Jugadores analizados", value: "+14" },
 ];
 
 const CONTACTOS = [

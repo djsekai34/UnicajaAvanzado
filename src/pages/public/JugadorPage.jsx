@@ -54,6 +54,8 @@ const ADV_METRICS = [
   { key:'raptor',    label:'RAPTOR', desc:'RAPTOR (aprox.)',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'lebron',    label:'LEBRON', desc:'LEBRON (aprox.)',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'tendencia_val', label:'TEND', desc:'Tendencia VAL (últ.5)', fmt: v => v!=null?v:'—',                  type:'rating' },
+  { key:'win_pct_titular',  label:'V% TITULAR',  desc:'% de victorias en los partidos que fue titular',  fmt: v => v!=null?v+'%':'—', type:'pct' },
+  { key:'win_pct_suplente', label:'V% SUPLENTE', desc:'% de victorias en los partidos que fue suplente', fmt: v => v!=null?v+'%':'—', type:'pct' },
 ]
 
 export default function JugadorPage() {
@@ -136,7 +138,7 @@ export default function JugadorPage() {
     .sort((a,b) => a.fecha.localeCompare(b.fecha))
 
   const ultimoPartido = partidos.find(p => p.id === statsOrdenadas[statsOrdenadas.length-1]?.partido_id)
-  const advanced = n > 0 ? calcAllAdvanced(avgStats, teamAvg, ultimoPartido?.puntos_rival, statsOrdenadas) : {}
+  const advanced = n > 0 ? calcAllAdvanced(avgStats, teamAvg, ultimoPartido?.puntos_rival, statsOrdenadas, partidos) : {}
 
   const { dd, td } = advanced.dobles_dobles != null
     ? { dd: advanced.dobles_dobles, td: advanced.triples_dobles }
@@ -272,6 +274,8 @@ export default function JugadorPage() {
             <>
               <div className="stat-grid">
                 {[
+                  { label:'Partidos jugados', value: n, sub: 'esta temporada' },
+                  { label:'De titular', value: statsFiltradas.filter(s => s.titular).length, sub: `de ${n} partidos` },
                   { label:'Puntos', value: rnd(avg('pts')), accent:true },
                   { label:'Rebotes', value: rnd(avg('rt')) },
                   { label:'Asistencias', value: rnd(avg('as_')) },
@@ -288,7 +292,7 @@ export default function JugadorPage() {
                   <div key={s.label} className={`stat-card${s.accent?' accent':s.lima?' lima':''}`}>
                     <div className="sc-label">{s.label}</div>
                     <div className="sc-value">{s.value ?? '—'}</div>
-                    <div className="sc-sub">por partido</div>
+                    <div className="sc-sub">{s.sub || 'por partido'}</div>
                   </div>
                 ))}
               </div>
@@ -320,7 +324,7 @@ export default function JugadorPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Fecha</th><th>Rival</th><th>Comp.</th><th>Resultado</th><th>MIN</th>
+                    <th>Fecha</th><th>Rival</th><th>Rol</th><th>Comp.</th><th>Resultado</th><th>MIN</th>
                     <th>PTS</th><th>T2</th><th>T3</th><th>TL</th>
                     <th>RO</th><th>RD</th><th>RT</th><th>AS</th>
                     <th>PÉR</th><th>REC</th><th>TAP</th><th>MAT</th>
@@ -337,6 +341,11 @@ export default function JugadorPage() {
                           {p?.fecha ? new Date(p.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) : '—'}
                         </td>
                         <td style={{ fontWeight:600, color:'var(--blanco)' }}>{p?.rival || '—'}</td>
+                        <td>
+                          {s.titular
+                            ? <span className="badge badge-local">Titular</span>
+                            : <span className="badge badge-visit">Suplente</span>}
+                        </td>
                         <td><span className={badgeCls(p?.competiciones?.nombre)}>{p?.competiciones?.nombre}</span></td>
                         <td style={{ whiteSpace:'nowrap', fontFamily:'var(--font-display)', fontWeight:700, fontSize:13 }}>
   {p?.puntos_unicaja != null

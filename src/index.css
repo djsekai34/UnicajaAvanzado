@@ -144,6 +144,7 @@ img, svg, table { max-width: 100%; }
   align-items: flex-end;
 }
 .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 140px; }
+.filters-bar-extra { margin-left: auto; align-self: flex-end; }
 .filter-group label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--gris-500); }
 .filter-group select {
   background: var(--negro);
@@ -180,6 +181,10 @@ img, svg, table { max-width: 100%; }
   min-width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+}
+.filter-group input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
 }
 .filter-group select:focus,
 .filter-group input:focus { border-color: var(--verde); }
@@ -349,6 +354,7 @@ select option { background: var(--gris-900); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead { background: var(--gris-800); }
 th { text-align: left; padding: 11px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gris-500); border-bottom: 1px solid var(--gris-700); white-space: nowrap; cursor: pointer; user-select: none; }
+th.num { text-align: right; }
 th:hover { color: var(--blanco); }
 th.sorted { color: var(--verde); }
 td { padding: 12px 14px; border-bottom: 1px solid rgba(55,65,81,.5); color: var(--gris-300); white-space: nowrap; }
@@ -411,6 +417,47 @@ td.lima { color: var(--lima); font-weight: 700; }
   opacity: 0.92;
 }
 
+/* ─── ENTRENADOR + RÉCORD DEL EQUIPO ────────────────────────────────────── */
+.equipo-record-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 14px;
+  background: var(--negro);
+  border: 1px solid var(--gris-700);
+  border-radius: var(--radius);
+}
+.equipo-record-entrenador { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.equipo-record-entrenador img,
+.equipo-record-avatar-placeholder {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; border: 2px solid var(--gris-700);
+}
+.equipo-record-avatar-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gris-700); font-size: 13px; color: var(--gris-500);
+  line-height: 1; overflow: hidden;
+}
+.equipo-record-label { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .7px; color: var(--gris-500); }
+.equipo-record-nombre { font-family: var(--font-display); font-size: 13.5px; font-weight: 700; color: var(--blanco); white-space: nowrap; }
+
+.equipo-record-linea {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-left: 14px;
+  border-left: 1px solid var(--gris-700);
+  white-space: nowrap;
+}
+.equipo-record-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gris-500); }
+.equipo-record-vd { font-family: var(--font-display); font-size: 14px; font-weight: 700; }
+.equipo-record-vd .pos { color: #4ADE80; }
+.equipo-record-vd .neg { color: #F87171; }
+.equipo-record-vd .sep { color: var(--gris-600); margin: 0 2px; }
+.equipo-record-pct { font-size: 11px; color: var(--gris-500); }
+
 /* ─── CARD ───────────────────────────────────────────────────────────────── */
 .card { background: var(--gris-800); border: 1px solid var(--gris-700); border-radius: var(--radius-lg); padding: 24px; }
 
@@ -452,6 +499,38 @@ td.lima { color: var(--lima); font-weight: 700; }
 .form-group.full { grid-column: 1 / -1; }
 label { font-size: 13px; font-weight: 500; color: var(--gris-300); }
 input, select, textarea { background: var(--negro); border: 1px solid var(--gris-700); border-radius: var(--radius); color: var(--blanco); font-family: var(--font-body); font-size: 14px; padding: 9px 12px; width: 100%; transition: border-color .15s; outline: none; }
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  background: var(--negro);
+  border: 1.5px solid var(--gris-600);
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: background .15s, border-color .15s;
+}
+input[type="checkbox"]:hover { border-color: var(--verde); }
+input[type="checkbox"]:checked {
+  background: var(--verde);
+  border-color: var(--verde);
+}
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4.5px;
+  top: 1.5px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--negro);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
 input:focus, select:focus, textarea:focus { border-color: var(--lima); }
 input::placeholder { color: var(--gris-500); }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--gris-700); }
@@ -496,6 +575,9 @@ input::placeholder { color: var(--gris-500); }
 
   .tab-btn { padding: 10px 14px; font-size: 13px; }
 
+  .equipo-record-card { flex-wrap: wrap; row-gap: 8px; }
+  .equipo-record-linea { padding-left: 10px; }
+
   .filters-bar { padding: 14px; gap: 10px; }
   .filter-group { min-width: calc(50% - 5px); flex: 1 1 calc(50% - 5px); }
 
@@ -510,7 +592,7 @@ input::placeholder { color: var(--gris-500); }
   th, td { padding: 9px 10px; font-size: 12px; }
 
   .compare-header-placeholder { display: none; }
-  .compare-header-grid { grid-template-columns: repeat(var(--cols), 1fr); gap: 8px; }
+  .compare-header-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
 
   /* En táctil el hover no es fiable y el tooltip flotante se recorta
      dentro del scroll de la tabla, así que se apoya en el modal (tap). */

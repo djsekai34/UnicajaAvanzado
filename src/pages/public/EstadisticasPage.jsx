@@ -8,9 +8,11 @@ import {
 import { usePublicData } from '../../hooks/usePublicData'
 import FiltrosBar from '../../components/public/FiltrosBar'
 import AniversarioBadge from '../../components/public/AniversarioBadge'
+import EquipoRecordCard from '../../components/public/EquipoRecordCard'
 
 const BASIC_COLS = [
   { key: 'partidos', label: 'PJ', desc: 'Partidos jugados' },
+  { key: 'titularidades', label: 'TIT', desc: 'Partidos que ha sido titular' },
   { key: 'min',      label: 'MIN', desc: 'Minutos' },
   { key: 'pts',      label: 'PTS', desc: 'Puntos' },
   { key: 'rt',       label: 'RT',  desc: 'Rebotes totales' },
@@ -50,6 +52,8 @@ const ADV_COLS = [
   { key: 'raptor',   label: 'RAPTOR',  desc: 'RAPTOR (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'lebron',   label: 'LEBRON',  desc: 'LEBRON (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'tendencia_val', label: 'TEND', desc: 'Tendencia VAL (últ.5)', fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'win_pct_titular',  label: 'V% TIT', desc: '% de victorias en los partidos que fue titular',  fmt: v => v != null ? v+'%' : '—', type: 'pct' },
+  { key: 'win_pct_suplente', label: 'V% SUP', desc: '% de victorias en los partidos que fue suplente', fmt: v => v != null ? v+'%' : '—', type: 'pct' },
 ]
 
 const COLORS = ['#4E9E47','#9DC41A','#60A5FA','#F59E0B','#A78BFA','#F87171','#34D399','#FB923C']
@@ -114,7 +118,8 @@ export default function EstadisticasPage() {
   const [evoMetrics, setEvoMetrics] = useState(['val']) // métricas elegidas en modo "todos"
 
   const { promediosPorJugador, jugadoresSeleccionados, partidosFiltrados, loading } = data
-  const temporadaNombre = data.temporadas?.find(t => String(t.id) === String(data.temporadaId))?.nombre
+  const temporadaActual = data.temporadas?.find(t => String(t.id) === String(data.temporadaId))
+  const temporadaNombre = temporadaActual?.nombre
 
   const rows = useMemo(() => {
     return jugadoresSeleccionados
@@ -323,7 +328,7 @@ export default function EstadisticasPage() {
         <AniversarioBadge temporadaNombre={temporadaNombre} />
       </div>
 
-      <FiltrosBar {...data} />
+      <FiltrosBar {...data} extra={<EquipoRecordCard temporada={temporadaActual} />} />
 
       {/* Tabs — solo si hay datos */}
       {rows.length === 0 ? (
@@ -359,7 +364,7 @@ export default function EstadisticasPage() {
                   <tr>
                     <th style={{ minWidth: 160 }}>Jugador</th>
                     {BASIC_COLS.map(c => (
-                      <th key={c.key} className={sortCol===c.key?'sorted':''} onClick={() => handleSort(c.key)}
+                      <th key={c.key} className={`num${sortCol===c.key?' sorted':''}`} onClick={() => handleSort(c.key)}
                         title={c.desc}>
                         {c.label} {sortCol===c.key ? (sortDir===-1?'↓':'↑') : ''}
                       </th>
@@ -391,6 +396,7 @@ export default function EstadisticasPage() {
                         </div>
                       </td>
                       <td className="num">{r.partidos}</td>
+                      <td className="num">{r.titularidades}</td>
                       <td className="num">{r.min}</td>
                       <td className="num highlight">{r.pts}</td>
                       <td className="num">{r.rt}</td>
@@ -427,7 +433,7 @@ export default function EstadisticasPage() {
                   <tr>
                     <th style={{ minWidth: 160 }}>Jugador</th>
                     {ADV_COLS.map(c => (
-                      <th key={c.key} className={sortCol===c.key?'sorted':''} onClick={() => handleSort(c.key)} title={c.desc}>
+                      <th key={c.key} className={`num${sortCol===c.key?' sorted':''}`} onClick={() => handleSort(c.key)} title={c.desc}>
                         {c.label} {sortCol===c.key ? (sortDir===-1?'↓':'↑') : ''}
                       </th>
                     ))}
@@ -671,6 +677,7 @@ export default function EstadisticasPage() {
                 { grupo: 'Métricas de seguimiento', items: [
                   { label: 'TEND — Tendencia VAL', formula: 'Media de valoración ACB de los últimos 5 partidos', desc: 'Indica si el jugador está en buena o mala racha reciente. Si la tendencia supera la media de temporada, el jugador está en forma.' },
                   { label: 'DD / TD — Dobles-dobles / Triples-dobles', formula: 'Partidos con ≥10 en 2 ó 3 categorías (PTS, REB, AST, REC, TAP)', desc: 'Contador acumulado de actuaciones destacadas en la temporada.' },
+                  { label: 'V% TIT / V% SUP — % Victorias como titular / suplente', formula: 'Partidos ganados jugando de titular (o de suplente) / total de partidos en ese rol × 100', desc: 'Compara si el equipo gana más cuando este jugador sale de inicio o cuando entra desde el banquillo. Dato exacto, cruza cada partido con su resultado real.' },
                 ]},
               ].map(grupo => (
                 <div key={grupo.grupo} className="card">

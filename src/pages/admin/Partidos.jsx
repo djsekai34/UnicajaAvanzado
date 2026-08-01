@@ -46,8 +46,8 @@ export default function Partidos() {
   }
 
   const openCreate = () => {
-    const activa = temporadas.find(t => t.activa) || temporadas[0]
-    setForm({ ...emptyForm, temporada_id: String(activa?.id || ''), competicion_id: String(competiciones[0]?.id || '') })
+    const tid = filtroTemp || String(temporadas.find(t => t.activa)?.id || temporadas[0]?.id || '')
+    setForm({ ...emptyForm, temporada_id: tid, competicion_id: String(competiciones[0]?.id || '') })
     setEditId(null)
     setModal(true)
   }

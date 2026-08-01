@@ -617,7 +617,41 @@ export function calcDDs(statsArray) {
 // ────────────────────────────────────────────────────────────────────────────
 // FUNCIÓN PRINCIPAL — calcula todas las métricas para un jugador
 // ────────────────────────────────────────────────────────────────────────────
-export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPartidosStats) {
+// ────────────────────────────────────────────────────────────────────────────
+// 14. % de victoria siendo titular vs siendo suplente
+//     Dato exacto: cruza cada partido jugado (con su "titular" sí/no) con el
+//     resultado real de ese partido (puntos_unicaja vs puntos_rival).
+// ────────────────────────────────────────────────────────────────────────────
+export function calcWinPctPorRol(statsJugador, partidos) {
+  if (!statsJugador?.length || !partidos?.length) {
+    return { win_pct_titular: null, win_pct_suplente: null, partidos_titular: 0, partidos_suplente: 0 }
+  }
+
+  const partidoById = Object.fromEntries(partidos.map(p => [p.id, p]))
+  let winTit = 0, totTit = 0, winSup = 0, totSup = 0
+
+  statsJugador.forEach(s => {
+    const p = partidoById[s.partido_id]
+    if (!p || p.puntos_unicaja == null || p.puntos_rival == null) return
+    const gano = p.puntos_unicaja > p.puntos_rival
+    if (s.titular) {
+      totTit++
+      if (gano) winTit++
+    } else {
+      totSup++
+      if (gano) winSup++
+    }
+  })
+
+  return {
+    win_pct_titular:  totTit > 0 ? round((winTit / totTit) * 100, 1) : null,
+    win_pct_suplente: totSup > 0 ? round((winSup / totSup) * 100, 1) : null,
+    partidos_titular:  totTit,
+    partidos_suplente: totSup,
+  }
+}
+
+export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPartidosStats, partidos) {
   const p    = playerStats
   const team = teamStats || null
 
@@ -648,6 +682,8 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
   const { dd, td } = todosLosPartidosStats
     ? calcDDs(todosLosPartidosStats)
     : { dd: null, td: null }
+
+  const winPorRol = calcWinPctPorRol(todosLosPartidosStats, partidos)
 
   return {
     // Tiro
@@ -688,6 +724,10 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
     tendencia_val: tendVal,
     dobles_dobles: dd,
     triples_dobles: td,
+    win_pct_titular:   winPorRol.win_pct_titular,
+    win_pct_suplente:  winPorRol.win_pct_suplente,
+    partidos_titular:  winPorRol.partidos_titular,
+    partidos_suplente: winPorRol.partidos_suplente,
   }
 }
 

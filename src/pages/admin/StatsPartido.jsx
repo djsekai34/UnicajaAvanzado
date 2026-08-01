@@ -63,7 +63,9 @@ export default function StatsPartido() {
   const [statsMap, setStatsMap] = useState({})
   const [editandoId, setEditandoId] = useState(null)
   const [formStats, setFormStats] = useState(emptyStats())
+  const [formTitular, setFormTitular] = useState(false)
   const [drafts, setDrafts] = useState({})
+  const [draftsTitular, setDraftsTitular] = useState({})
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -102,17 +104,26 @@ export default function StatsPartido() {
     if (draft) {
       // Hay borrador sin guardar: restaurarlo
       setFormStats(draft)
+      setFormTitular(draftsTitular[jugador.id] ?? !!existing?.titular ?? false)
     } else if (existing) {
       setFormStats(Object.fromEntries(CAMPOS.map(c => [c.key, existing[c.key] ?? ''])))
+      setFormTitular(!!existing.titular)
     } else {
       setFormStats(emptyStats())
+      setFormTitular(false)
     }
     setEditandoId(jugador.id)
   }
 
+  // Guarda el borrador de "titular" en cada cambio del checkbox
+  const setTitular = (val) => {
+    setFormTitular(val)
+    setDraftsTitular(d => ({ ...d, [editandoId]: val }))
+  }
+
   const handleSave = async () => {
     setSaving(true)
-    const payload = { partido_id: Number(id), jugador_id: editandoId }
+    const payload = { partido_id: Number(id), jugador_id: editandoId, titular: formTitular }
     CAMPOS.forEach(c => {
       const v = formStats[c.key]
       payload[c.key] = v === '' || v === null ? null : (c.tipo === 'decimal') ? parseFloat(v) : parseInt(v)
@@ -142,6 +153,7 @@ export default function StatsPartido() {
 
     // Limpiar borrador al guardar con éxito
     setDrafts(d => { const next = { ...d }; delete next[editandoId]; return next })
+    setDraftsTitular(d => { const next = { ...d }; delete next[editandoId]; return next })
     toast.success('Stats guardadas')
     setEditandoId(null)
     load()
@@ -269,7 +281,12 @@ export default function StatsPartido() {
                   return (
                     <tr key={j.id}>
                       <td style={{ color: 'var(--lima)', fontWeight: 700 }}>{j.dorsal}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--blanco)' }}>{j.nombre}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--blanco)' }}>
+                        {j.nombre}
+                        {s.titular
+                          ? <span className="badge badge-local" style={{ marginLeft: 8, fontSize: 10 }}>Titular</span>
+                          : <span className="badge badge-visit" style={{ marginLeft: 8, fontSize: 10 }}>Suplente</span>}
+                      </td>
                       <td>{s.min ?? '—'}</td>
                       <td style={{ fontWeight: 700, color: 'var(--blanco)' }}>{s.pts ?? '—'}</td>
                       <td>{s.t2_anotados ?? '—'}/{s.t2_intentos ?? '—'} <span style={{ fontSize:11, color:'var(--gris-500)' }}>({s.t2_pct != null ? s.t2_pct+'%' : '—'})</span></td>
@@ -326,7 +343,9 @@ export default function StatsPartido() {
                       style={{ marginLeft: 'auto', fontSize: 11 }}
                       onClick={() => {
                         setDrafts(d => { const next = { ...d }; delete next[editandoId]; return next })
+                        setDraftsTitular(d => { const next = { ...d }; delete next[editandoId]; return next })
                         setFormStats(emptyStats())
+                        setFormTitular(false)
                       }}
                     >
                       Descartar borrador
@@ -388,6 +407,20 @@ export default function StatsPartido() {
                     </div>
                   ))}
                   <div style={{ fontSize: 12, color: 'var(--gris-500)' }}>← Calculo automatico</div>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                    marginLeft: 'auto', background: 'var(--negro)', border: '1px solid var(--gris-700)',
+                    borderRadius: 'var(--radius)', padding: '8px 14px', fontSize: 13,
+                    color: 'var(--gris-300)', fontWeight: 600,
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={formTitular}
+                      onChange={e => setTitular(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: 'var(--verde)', cursor: 'pointer' }}
+                    />
+                    Fue titular
+                  </label>
                 </div>
 
                 {/* Grid de inputs */}

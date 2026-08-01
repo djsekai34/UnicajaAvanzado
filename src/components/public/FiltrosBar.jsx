@@ -22,6 +22,7 @@ export default function FiltrosBar({
   fechaDesde, setFechaDesde,
   fechaHasta, setFechaHasta,
   jugadoresIds, toggleJugador,
+  extra,
 }) {
   const location = useLocation()
   const esComparador = location.pathname.startsWith('/comparador')
@@ -76,6 +77,12 @@ export default function FiltrosBar({
           }}>
             ✕ Limpiar
           </button>
+        )}
+
+        {extra && (
+          <div className="filters-bar-extra">
+            {extra}
+          </div>
         )}
       </div>
 

@@ -134,14 +134,34 @@ export function usePublicData() {
       const ultimoPartido = partidos.find(p => p.id === ultimoPartidoId)
       const puntosRival = ultimoPartido?.puntos_rival
 
-      const advanced = calcAllAdvanced(avgStats, teamAvg, puntosRival, stats)
+      const advanced = calcAllAdvanced(avgStats, teamAvg, puntosRival, stats, partidos)
 
       result[jid] = {
         jugador: jugMap[jid],
         partidos: n,
+        titularidades: stats.filter(s => s.titular).length,
         stats: avgStats,
         statsHistoricas: stats,
         advanced,
+      }
+    })
+
+    // Jugadores SIN stats en el rango filtrado: se incluyen igualmente con
+    // todo a 0, en vez de desaparecer de las tablas.
+    const camposEnCero = [
+      'min','pts','t2_anotados','t2_intentos','t3_anotados','t3_intentos',
+      'tl_anotados','tl_intentos','ro','rd','rt','as_','per','rec','tap',
+      'tr','mat','fp','fr','plus_minus','val',
+    ]
+    jugadores.forEach(j => {
+      if (result[j.id]) return
+      result[j.id] = {
+        jugador: j,
+        partidos: 0,
+        titularidades: 0,
+        stats: Object.fromEntries(camposEnCero.map(k => [k, 0])),
+        statsHistoricas: [],
+        advanced: {},
       }
     })
     return result
