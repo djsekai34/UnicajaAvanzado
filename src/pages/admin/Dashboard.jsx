@@ -91,7 +91,7 @@ export default function Dashboard() {
                     <td>{new Date(p.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td style={{ fontWeight: 600, color: 'var(--blanco)' }}>{p.rival}</td>
                     <td><span className={badgeClass(p.competiciones?.nombre)}>{p.competiciones?.nombre}</span></td>
-                    <td><span className={`badge ${p.es_local ? 'badge-local' : 'badge-visit'}`}>{p.es_local ? 'Local' : 'Visitante'}</span></td>
+                    <td><span className={`badge ${p.es_local === null ? 'badge-neutral' : p.es_local ? 'badge-local' : 'badge-visit'}`}>{p.es_local === null ? 'Sede neutra' : p.es_local ? 'Local' : 'Visitante'}</span></td>
                     <td style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
                       {p.puntos_unicaja != null ? `${p.puntos_unicaja} - ${p.puntos_rival}` : '—'}
                     </td>

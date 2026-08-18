@@ -49,6 +49,22 @@ export default function PublicLayout() {
           >
             Comparador
           </NavLink>
+          <NavLink
+            to="/equipo"
+            className={({ isActive }) =>
+              `pub-nav-link${isActive ? " active" : ""}`
+            }
+          >
+            Equipo
+          </NavLink>
+          <NavLink
+            to="/calendario"
+            className={({ isActive }) =>
+              `pub-nav-link${isActive ? " active" : ""}`
+            }
+          >
+            Calendario
+          </NavLink>
         </div>
         <Link to="/sobre-mi" className="pub-nav-credit">
           <span className="ball">🏀</span>

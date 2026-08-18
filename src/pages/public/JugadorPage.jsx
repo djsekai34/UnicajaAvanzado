@@ -56,6 +56,8 @@ const ADV_METRICS = [
   { key:'tendencia_val', label:'TEND', desc:'Tendencia VAL (últ.5)', fmt: v => v!=null?v:'—',                  type:'rating' },
   { key:'win_pct_titular',  label:'V% TITULAR',  desc:'% de victorias en los partidos que fue titular',  fmt: v => v!=null?v+'%':'—', type:'pct' },
   { key:'win_pct_suplente', label:'V% SUPLENTE', desc:'% de victorias en los partidos que fue suplente', fmt: v => v!=null?v+'%':'—', type:'pct' },
+  { key:'aportacion_equipo_pct', label:'APORT% EQUIPO', desc:'% de la producción total del equipo (PTS+REB+AST+ROB+TAP) que pone', fmt: v => v!=null?v+'%':'—', type:'pct' },
+  { key:'minutos_equipo_pct',    label:'MIN% EQUIPO',   desc:'% de los minutos totales del equipo que juega', fmt: v => v!=null?v+'%':'—', type:'pct' },
 ]
 
 export default function JugadorPage() {
@@ -138,7 +140,13 @@ export default function JugadorPage() {
     .sort((a,b) => a.fecha.localeCompare(b.fecha))
 
   const ultimoPartido = partidos.find(p => p.id === statsOrdenadas[statsOrdenadas.length-1]?.partido_id)
-  const advanced = n > 0 ? calcAllAdvanced(avgStats, teamAvg, ultimoPartido?.puntos_rival, statsOrdenadas, partidos) : {}
+  // Total de minutos del equipo en todos los partidos filtrados (suma real,
+  // no media), para el % de minutos del equipo de este jugador.
+  const partidoIdsFiltrados = new Set(statsFiltradas.map(s => s.partido_id))
+  const minTotalEquipoTemporada = allStats
+    .filter(s => partidoIdsFiltrados.has(s.partido_id))
+    .reduce((a, s) => a + (s.min || 0), 0)
+  const advanced = n > 0 ? calcAllAdvanced(avgStats, teamAvg, ultimoPartido?.puntos_rival, statsOrdenadas, partidos, minTotalEquipoTemporada) : {}
 
   const { dd, td } = advanced.dobles_dobles != null
     ? { dd: advanced.dobles_dobles, td: advanced.triples_dobles }
@@ -376,8 +384,8 @@ export default function JugadorPage() {
                     )
                   })}
                   <tr style={{ background:'var(--gris-800)', fontWeight:700 }}>
-                    <td colSpan={3} style={{ color:'var(--gris-400)', fontSize:12 }}>MEDIA</td>
-                    <td></td> 
+                    <td colSpan={4} style={{ color:'var(--gris-400)', fontSize:12 }}>MEDIA</td>
+                    <td></td>
                     <td className="num">{rnd(avg('min'))}</td>
                     <td className="num highlight">{rnd(avg('pts'))}</td>
                     <td className="num">{rnd(avg('t2_anotados'),1)}/{rnd(avg('t2_intentos'),1)}</td>

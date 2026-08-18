@@ -97,6 +97,17 @@ export default function StatsPartido() {
 
   useEffect(() => { load() }, [id])
 
+  // Recalcula los puntos del Unicaja en ese partido sumando los puntos de
+  // TODOS los jugadores con stats metidas — así no hace falta escribirlos
+  // a mano en Partidos.jsx, salen solos según se van metiendo stats.
+  const actualizarPuntosEquipo = async () => {
+    const { data: stats } = await supabase.from('stats').select('pts').eq('partido_id', id)
+    const total = stats && stats.length > 0
+      ? stats.reduce((sum, s) => sum + (s.pts || 0), 0)
+      : null
+    await supabase.from('partidos').update({ puntos_unicaja: total }).eq('id', id)
+  }
+
   const openEdit = (jugador) => {
     const existing = statsMap[jugador.id]
     const draft = drafts[jugador.id]
@@ -154,6 +165,7 @@ export default function StatsPartido() {
     // Limpiar borrador al guardar con éxito
     setDrafts(d => { const next = { ...d }; delete next[editandoId]; return next })
     setDraftsTitular(d => { const next = { ...d }; delete next[editandoId]; return next })
+    await actualizarPuntosEquipo()
     toast.success('Stats guardadas')
     setEditandoId(null)
     load()
@@ -164,6 +176,7 @@ export default function StatsPartido() {
     if (!existing) return
     if (!confirm('¿Eliminar las stats de este jugador en este partido?')) return
     await supabase.from('stats').delete().eq('id', existing.id)
+    await actualizarPuntosEquipo()
     toast.success('Stats eliminadas')
     load()
   }
@@ -213,7 +226,7 @@ export default function StatsPartido() {
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <span className={badgeClass(partido.competiciones?.nombre)}>{partido.competiciones?.nombre}</span>
-              <span className={`badge ${partido.es_local ? 'badge-local' : 'badge-visit'}`}>{partido.es_local ? 'Local' : 'Visitante'}</span>
+              <span className={`badge ${partido.es_local === null ? 'badge-neutral' : partido.es_local ? 'badge-local' : 'badge-visit'}`}>{partido.es_local === null ? 'Sede neutra' : partido.es_local ? 'Local' : 'Visitante'}</span>
               {partido.puntos_unicaja != null && (
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: partido.puntos_unicaja > partido.puntos_rival ? '#4ADE80' : '#F87171' }}>
                   {partido.puntos_unicaja} – {partido.puntos_rival}

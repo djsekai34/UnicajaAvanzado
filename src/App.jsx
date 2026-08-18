@@ -6,11 +6,14 @@ import LoginPage from "./pages/admin/LoginPage";
 import Dashboard from "./pages/admin/Dashboard";
 import Jugadores from "./pages/admin/Jugadores";
 import Partidos from "./pages/admin/Partidos";
+import ImportarCalendario from "./pages/admin/ImportarCalendario";
 import StatsPartido from "./pages/admin/StatsPartido";
 import Temporadas from "./pages/admin/Temporadas";
 import EstadisticasPage from "./pages/public/EstadisticasPage";
 import JugadorPage from "./pages/public/JugadorPage";
 import ComparadorPage from "./pages/public/ComparadorPage";
+import EquipoPage from "./pages/public/EquipoPage";
+import CalendarioPage from "./pages/public/CalendarioPage";
 import SobreMiPage from "./pages/public/SobreMiPage";
 
 function ProtectedRoute({ children }) {
@@ -32,6 +35,8 @@ export default function App() {
       <Route path="/" element={<PublicLayout />}>
         <Route index element={<EstadisticasPage />} />
         <Route path="comparador" element={<ComparadorPage />} />
+        <Route path="equipo" element={<EquipoPage />} />
+        <Route path="calendario" element={<CalendarioPage />} />
         <Route path=":slug" element={<JugadorPage />} />
         <Route path="sobre-mi" element={<SobreMiPage />} />
       </Route>
@@ -51,6 +56,7 @@ export default function App() {
         <Route path="jugadores" element={<Jugadores />} />
         <Route path="partidos" element={<Partidos />} />
         <Route path="partidos/:id/stats" element={<StatsPartido />} />
+        <Route path="calendario-importar" element={<ImportarCalendario />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

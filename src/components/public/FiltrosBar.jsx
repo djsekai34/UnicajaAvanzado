@@ -26,6 +26,7 @@ export default function FiltrosBar({
 }) {
   const location = useLocation()
   const esComparador = location.pathname.startsWith('/comparador')
+  const esEquipo = location.pathname.startsWith('/equipo')
 
   const badgeComp = (nombre) => {
     const map = { ACB: 'acb', BCL: 'bcl', 'Copa del Rey': 'copa', Supercopa: 'super', Intercontinental: 'inter' }
@@ -87,7 +88,7 @@ export default function FiltrosBar({
       </div>
 
       {/* Selector de jugadores — no aplica en /comparador */}
-      {!esComparador && (
+      {!esComparador && !esEquipo && (
         <div className="jugadores-selector">
           {jugadores.map(j => (
             <button

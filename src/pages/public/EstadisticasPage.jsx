@@ -54,6 +54,8 @@ const ADV_COLS = [
   { key: 'tendencia_val', label: 'TEND', desc: 'Tendencia VAL (últ.5)', fmt: v => v != null ? v : '—', type: 'rating' },
   { key: 'win_pct_titular',  label: 'V% TIT', desc: '% de victorias en los partidos que fue titular',  fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'win_pct_suplente', label: 'V% SUP', desc: '% de victorias en los partidos que fue suplente', fmt: v => v != null ? v+'%' : '—', type: 'pct' },
+  { key: 'aportacion_equipo_pct', label: 'APORT%', desc: '% de la producción total del equipo (PTS+REB+AST+ROB+TAP) que pone este jugador', fmt: v => v != null ? v+'%' : '—', type: 'pct' },
+  { key: 'minutos_equipo_pct',    label: 'MIN%',   desc: '% de los minutos totales del equipo que juega este jugador', fmt: v => v != null ? v+'%' : '—', type: 'pct' },
 ]
 
 const COLORS = ['#4E9E47','#9DC41A','#60A5FA','#F59E0B','#A78BFA','#F87171','#34D399','#FB923C']
@@ -258,8 +260,8 @@ export default function EstadisticasPage() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--gris-700)" />
             <XAxis dataKey="partido" tick={{ fill:'var(--gris-500)', fontSize:11 }} />
             <YAxis tick={{ fill:'var(--gris-500)', fontSize:11 }} />
-            <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ fontSize:12, color:'var(--gris-300)' }} />
+            <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={0} stroke="var(--gris-600)" />
             {jugadoresSeleccionados.map((jid, i) => {
               const d = promediosPorJugador[jid]
@@ -297,7 +299,7 @@ export default function EstadisticasPage() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--gris-700)" />
             <XAxis dataKey="nombre" tick={{ fill:'var(--gris-500)', fontSize:11 }} angle={-30} textAnchor="end" />
             <YAxis tick={{ fill:'var(--gris-500)', fontSize:11 }} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--gris-700)', opacity: 0.3 }} />
             <Bar dataKey="valor" name={label} fill={color} radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -431,7 +433,7 @@ export default function EstadisticasPage() {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ minWidth: 160 }}>Jugador</th>
+                    <th className="col-sticky" style={{ minWidth: 160 }}>Jugador</th>
                     {ADV_COLS.map(c => (
                       <th key={c.key} className={`num${sortCol===c.key?' sorted':''}`} onClick={() => handleSort(c.key)} title={c.desc}>
                         {c.label} {sortCol===c.key ? (sortDir===-1?'↓':'↑') : ''}
@@ -442,7 +444,7 @@ export default function EstadisticasPage() {
                 <tbody>
                   {rows.map(r => (
                     <tr key={r.jugador.id}>
-                      <td>
+                      <td className="col-sticky">
                         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                           <span style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'var(--verde)', fontSize:13 }}>#{r.jugador.dorsal}</span>
                           <span style={{ fontWeight:600, color:'var(--blanco)' }}>{r.jugador.nombre}</span>
@@ -554,8 +556,8 @@ export default function EstadisticasPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--gris-700)" />
                           <XAxis dataKey="metric" tick={{ fill:'var(--gris-500)', fontSize:11 }} />
                           <YAxis tick={{ fill:'var(--gris-500)', fontSize:11 }} />
-                          <Tooltip content={<CustomTooltip />} />
                           <Legend wrapperStyle={{ fontSize:12, color:'var(--gris-300)' }} />
+                          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--gris-700)', opacity: 0.3 }} />
                           {jugadoresSeleccionados.map((jid, i) => {
                             const d = promediosPorJugador[jid]
                             if (!d) return null
@@ -655,6 +657,10 @@ export default function EstadisticasPage() {
                 ]},
                 { grupo: 'Faltas y disciplina', items: [
                   { label: 'FP/40 — Faltas personales por 40 min', formula: 'FP / Minutos × 40', desc: 'Ritmo de faltas normalizado a 40 minutos, para comparar jugadores con distinto tiempo de juego. Un valor alto puede indicar un defensor agresivo o con problemas de disciplina; en pívots interiores suele ser algo más alto que en exteriores.' },
+                ]},
+                { grupo: 'Peso en el equipo', items: [
+                  { label: 'APORT% — % Aportación al equipo', formula: '100 × (PTS+REB+AST+ROB+TAP jugador) / (PTS+REB+AST+ROB+TAP equipo)', desc: 'Qué parte de la producción total del equipo (puntos, rebotes, asistencias, robos y tapones sumados) pone este jugador. Usa los totales reales del equipo en los partidos que jugó. Cuanto más alto, más peso tiene en el juego del equipo.' },
+                  { label: 'MIN% — % Minutos del equipo', formula: '100 × Minutos jugador / Minutos totales del equipo', desc: 'Qué parte de los minutos totales disponibles (los de los 5 jugadores en pista sumados) se lleva este jugador. Indica cuánta confianza/rol tiene dentro de la rotación.' },
                 ]},
                 { grupo: 'Ratings y eficiencia global', items: [
                   { label: 'PER — Player Efficiency Rating', formula: 'Fórmula Hollinger completa normalizada a media 15', desc: 'La métrica histórica de Hollinger. Intenta resumir toda la contribución de un jugador en un solo número. Media de liga = 15. Por encima de 20 es All-Star, por encima de 25 es MVP.' },

@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const emptyForm = { nombre: '', entrenador: '', entrenador_foto_url: '' }
+
+// Mismo mapeo de clases visuales que se usa en el resto de la web para
+// pintar cada competición con su color.
+const BADGE_CLASS = { ACB: 'acb', BCL: 'bcl', 'Copa del Rey': 'copa', Supercopa: 'super', Intercontinental: 'inter' }
+const BADGE_ABREV = { ACB: 'ACB', BCL: 'BCL', 'Copa del Rey': 'COPA', Supercopa: 'SUPER', Intercontinental: 'INTER' }
 
 // Autoformatea lo que se va escribiendo al formato "20xx/xx": el usuario
 // solo teclea los 4 dígitos del año de inicio (ej. 2027) y se le añade
@@ -30,10 +36,30 @@ export default function Temporadas() {
   const [editSaving, setEditSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null) // temporada a borrar
   const [deleting, setDeleting] = useState(false)
+  const [competiciones, setCompeticiones] = useState([])
+  const [titulosPorTemporada, setTitulosPorTemporada] = useState({}) // { temporada_id: { competicion_id: true/false } }
+  const [tooltip, setTooltip] = useState(null) // { x, y, texto }
+
+  const mostrarTooltip = (e, texto) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setTooltip({ x: rect.left + rect.width / 2, y: rect.bottom + 8, texto })
+  }
+  const ocultarTooltip = () => setTooltip(null)
 
   const load = async () => {
-    const { data } = await supabase.from('temporadas').select('*').order('id', { ascending: false })
+    const [{ data }, { data: comps }, { data: tits }] = await Promise.all([
+      supabase.from('temporadas').select('*').order('id', { ascending: false }),
+      supabase.from('competiciones').select('*').order('id'),
+      supabase.from('titulos').select('*'),
+    ])
     setTemporadas(data || [])
+    setCompeticiones(comps || [])
+    const map = {}
+    ;(tits || []).forEach(t => {
+      if (!map[t.temporada_id]) map[t.temporada_id] = {}
+      map[t.temporada_id][t.competicion_id] = t.conseguido
+    })
+    setTitulosPorTemporada(map)
     setLoading(false)
   }
 
@@ -134,6 +160,20 @@ export default function Temporadas() {
     setEditId(t.id)
     setEditForm({ nombre: t.nombre, entrenador: t.entrenador || '', entrenador_foto_url: t.entrenador_foto_url || '' })
     setEditModal(true)
+  }
+
+  const toggleTitulo = async (temporada, competicionId) => {
+    if (!temporada.activa) return // solo se puede tocar en la temporada activa
+    const actual = titulosPorTemporada[temporada.id]?.[competicionId]
+    const nuevoValor = !actual
+    setTitulosPorTemporada(m => ({ ...m, [temporada.id]: { ...m[temporada.id], [competicionId]: nuevoValor } })) // optimista
+    const { error } = await supabase
+      .from('titulos')
+      .upsert({ temporada_id: temporada.id, competicion_id: competicionId, conseguido: nuevoValor }, { onConflict: 'temporada_id,competicion_id' })
+    if (error) {
+      toast.error('Error al guardar el título')
+      setTitulosPorTemporada(m => ({ ...m, [temporada.id]: { ...m[temporada.id], [competicionId]: actual } })) // revertir
+    }
   }
 
   const handleEditSave = async (e) => {
@@ -270,10 +310,39 @@ export default function Temporadas() {
             {temporadas.map(t => (
               <tr key={t.id}>
                 <td>
-                  {t.entrenador_foto_url
-                    ? <img src={t.entrenador_foto_url} alt={t.entrenador || ''} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--gris-700)' }} />
-                    : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gris-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--gris-500)' }}>👤</div>
-                  }
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {t.entrenador_foto_url
+                      ? <img src={t.entrenador_foto_url} alt={t.entrenador || ''} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--gris-700)' }} />
+                      : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gris-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--gris-500)' }}>👤</div>
+                    }
+                  </div>
+                  {competiciones.length > 0 && (
+                    <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                      {competiciones.map(c => {
+                        const conseguido = !!titulosPorTemporada[t.id]?.[c.id]
+                        const cls = BADGE_CLASS[c.nombre] || 'acb'
+                        const texto = t.activa
+                          ? `${c.nombre}${conseguido ? ' — conseguida' : ''}`
+                          : `${c.nombre} — solo editable en la temporada activa`
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => toggleTitulo(t, c.id)}
+                            onMouseEnter={(e) => mostrarTooltip(e, texto)}
+                            onMouseLeave={ocultarTooltip}
+                            className={`titulo-tag titulo-tag-${cls}`}
+                            style={{
+                              cursor: t.activa ? 'pointer' : 'not-allowed',
+                              opacity: conseguido ? 1 : 0.3,
+                            }}
+                          >
+                            {BADGE_ABREV[c.nombre] || c.nombre}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </td>
                 <td style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16 }}>{t.nombre}</td>
                 <td style={{ color: 'var(--gris-300)' }}>{t.entrenador || '—'}</td>
@@ -379,6 +448,13 @@ export default function Temporadas() {
             </div>
           </div>
         </div>
+      )}
+
+      {tooltip && createPortal(
+        <div className="floating-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+          {tooltip.texto}
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -615,6 +615,31 @@ export function calcDDs(statsArray) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// 19. % Aportación al equipo — qué parte de la "producción" total del
+//     equipo (PTS+REB+AST+ROB+TAP) pone el jugador. Usa los totales de
+//     equipo reales de los partidos que jugó (no una estimación).
+// ────────────────────────────────────────────────────────────────────────────
+export function calcAportacionEquipo(p, team) {
+  if (!team) return null
+  const jugador = (p.pts || 0) + (p.rt || 0) + (p.as_ || 0) + (p.rec || 0) + (p.tap || 0)
+  const equipo  = (team.pts || 0) + (team.rt || 0) + (team.as_ || 0) + (team.rec || 0) + (team.tap || 0)
+  if (equipo <= 0) return null
+  return round(100 * jugador / equipo, 1)
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 20. % Minutos del equipo — qué parte de los minutos TOTALES jugados por
+//     el equipo a lo largo de la temporada/rango filtrado (suma de los
+//     minutos de todos los jugadores en todos los partidos, no una media)
+//     se lleva este jugador. Usa el TOTAL de minutos del jugador (suma de
+//     todos sus partidos) sobre el TOTAL de minutos del equipo.
+// ────────────────────────────────────────────────────────────────────────────
+export function calcMinutosEquipoPct(minTotalJugador, minTotalEquipo) {
+  if (!minTotalEquipo) return null
+  return round(100 * (minTotalJugador || 0) / minTotalEquipo, 1)
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // FUNCIÓN PRINCIPAL — calcula todas las métricas para un jugador
 // ────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
@@ -651,7 +676,7 @@ export function calcWinPctPorRol(statsJugador, partidos) {
   }
 }
 
-export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPartidosStats, partidos) {
+export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPartidosStats, partidos, minTotalEquipoTemporada = null) {
   const p    = playerStats
   const team = teamStats || null
 
@@ -684,6 +709,11 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
     : { dd: null, td: null }
 
   const winPorRol = calcWinPctPorRol(todosLosPartidosStats, partidos)
+  const aportacionEquipo = calcAportacionEquipo(p, team)
+  const minTotalJugador = todosLosPartidosStats
+    ? todosLosPartidosStats.reduce((a, s) => a + (s.min || 0), 0)
+    : null
+  const minutosEquipoPct = calcMinutosEquipoPct(minTotalJugador, minTotalEquipoTemporada)
 
   return {
     // Tiro
@@ -728,6 +758,9 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
     win_pct_suplente:  winPorRol.win_pct_suplente,
     partidos_titular:  winPorRol.partidos_titular,
     partidos_suplente: winPorRol.partidos_suplente,
+    // Peso en el equipo
+    aportacion_equipo_pct: aportacionEquipo,
+    minutos_equipo_pct:    minutosEquipoPct,
   }
 }
 

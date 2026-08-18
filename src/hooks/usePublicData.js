@@ -84,6 +84,15 @@ export function usePublicData() {
     return allStats.filter(s => partidoIds.has(s.partido_id))
   }, [allStats, partidoIds])
 
+  // Total de minutos jugados por el equipo en todo el rango filtrado (suma
+  // real de los minutos de TODOS los jugadores en TODOS los partidos, no
+  // una media) — se usa para calcular el % de minutos del equipo de cada
+  // jugador sobre el total real de la temporada.
+  const minTotalEquipoTemporada = useMemo(
+    () => statsFiltradas.reduce((a, s) => a + (s.min || 0), 0),
+    [statsFiltradas]
+  )
+
   // Promedios por jugador en el rango filtrado
   const promediosPorJugador = useMemo(() => {
     const result = {}
@@ -134,7 +143,7 @@ export function usePublicData() {
       const ultimoPartido = partidos.find(p => p.id === ultimoPartidoId)
       const puntosRival = ultimoPartido?.puntos_rival
 
-      const advanced = calcAllAdvanced(avgStats, teamAvg, puntosRival, stats, partidos)
+      const advanced = calcAllAdvanced(avgStats, teamAvg, puntosRival, stats, partidos, minTotalEquipoTemporada)
 
       result[jid] = {
         jugador: jugMap[jid],
@@ -165,7 +174,7 @@ export function usePublicData() {
       }
     })
     return result
-  }, [statsFiltradas, jugadores, partidos, allStats])
+  }, [statsFiltradas, jugadores, partidos, allStats, minTotalEquipoTemporada])
 
   // Toggle selección jugador
   const toggleJugador = (id) => {

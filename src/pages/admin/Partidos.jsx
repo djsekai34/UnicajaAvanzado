@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const emptyForm = {
-  fecha: '', rival: '', es_local: 'true',
+  fecha: '', rival: '', es_local: 'true', jornada: '',
   competicion_id: '', puntos_unicaja: '', puntos_rival: '', temporada_id: ''
 }
 
@@ -13,11 +13,14 @@ export default function Partidos() {
   const [competiciones, setCompeticiones] = useState([])
   const [temporadas, setTemporadas] = useState([])
   const [filtroTemp, setFiltroTemp] = useState('')
+  const [filtroComp, setFiltroComp] = useState('')
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [confirmDelete, setConfirmDelete] = useState(null) // partido a borrar
+  const [deleting, setDeleting] = useState(false)
 
   const load = async (tid) => {
     const { data: temps } = await supabase.from('temporadas').select('*').order('id', { ascending: false })
@@ -32,7 +35,7 @@ export default function Partidos() {
         .from('partidos')
         .select('*, competiciones(nombre)')
         .eq('temporada_id', useTid)
-        .order('fecha', { ascending: false })
+        .order('fecha', { ascending: true })
       setPartidos(data || [])
     }
     setLoading(false)
@@ -56,7 +59,8 @@ export default function Partidos() {
     setForm({
       fecha: p.fecha,
       rival: p.rival,
-      es_local: String(p.es_local),
+      es_local: p.es_local === null ? 'neutral' : String(p.es_local),
+      jornada: p.jornada ?? '',
       competicion_id: String(p.competicion_id),
       puntos_unicaja: p.puntos_unicaja ?? '',
       puntos_rival: p.puntos_rival ?? '',
@@ -72,7 +76,8 @@ export default function Partidos() {
     const payload = {
       fecha: form.fecha,
       rival: form.rival.trim(),
-      es_local: form.es_local === 'true',
+      es_local: form.es_local === 'neutral' ? null : form.es_local === 'true',
+      jornada: form.jornada.trim() ? form.jornada.trim() : null,
       competicion_id: Number(form.competicion_id),
       temporada_id: Number(form.temporada_id),
       puntos_unicaja: form.puntos_unicaja !== '' ? Number(form.puntos_unicaja) : null,
@@ -83,20 +88,30 @@ export default function Partidos() {
       : await supabase.from('partidos').insert(payload)
 
     setSaving(false)
-    if (error) { toast.error('Error al guardar'); return }
+    if (error) { toast.error(`Error al guardar: ${error.message || 'error desconocido'}`); return }
     toast.success(editId ? 'Partido actualizado' : 'Partido añadido')
     setModal(false)
     load(filtroTemp)
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este partido y todas sus stats?')) return
-    await supabase.from('partidos').delete().eq('id', id)
+  const handleDelete = (p) => setConfirmDelete(p)
+
+  const ejecutarDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    const { error } = await supabase.from('partidos').delete().eq('id', confirmDelete.id)
+    setDeleting(false)
+    if (error) { toast.error('Error al eliminar'); return }
     toast.success('Partido eliminado')
+    setConfirmDelete(null)
     load(filtroTemp)
   }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const partidosFiltrados = filtroComp
+    ? partidos.filter(p => String(p.competicion_id) === filtroComp)
+    : partidos
 
   const badgeClass = (nombre) => {
     const map = { ACB: 'acb', BCL: 'bcl', 'Copa del Rey': 'copa', Supercopa: 'super', Intercontinental: 'inter' }
@@ -125,13 +140,17 @@ export default function Partidos() {
         <button className="btn btn-primary" onClick={openCreate}>+ Nuevo partido</button>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 20, display: 'flex', gap: 12 }}>
         <select value={filtroTemp} onChange={e => handleFiltro(e.target.value)} style={{ maxWidth: 200 }}>
           {temporadas.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activa ? ' ★' : ''}</option>)}
         </select>
+        <select value={filtroComp} onChange={e => setFiltroComp(e.target.value)} style={{ maxWidth: 200 }}>
+          <option value="">Todas las competiciones</option>
+          {competiciones.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+        </select>
       </div>
 
-      {partidos.length === 0 ? (
+      {partidosFiltrados.length === 0 ? (
         <div className="empty-state card">
           <p>No hay partidos en esta temporada.</p>
           <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={openCreate}>+ Nuevo partido</button>
@@ -151,14 +170,14 @@ export default function Partidos() {
               </tr>
             </thead>
             <tbody>
-              {partidos.map(p => (
+              {partidosFiltrados.map(p => (
                 <tr key={p.id}>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {new Date(p.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
                   <td style={{ fontWeight: 600, color: 'var(--blanco)' }}>{p.rival}</td>
                   <td><span className={badgeClass(p.competiciones?.nombre)}>{p.competiciones?.nombre}</span></td>
-                  <td><span className={`badge ${p.es_local ? 'badge-local' : 'badge-visit'}`}>{p.es_local ? 'Local' : 'Visitante'}</span></td>
+                  <td><span className={`badge ${p.es_local === null ? 'badge-neutral' : p.es_local ? 'badge-local' : 'badge-visit'}`}>{p.es_local === null ? 'Sede neutra' : p.es_local ? 'Local' : 'Visitante'}</span></td>
                   <td>{resultado(p)}</td>
                   <td>
                     <Link to={`/admin/partidos/${p.id}/stats`} className="btn btn-lima btn-sm">
@@ -167,7 +186,7 @@ export default function Partidos() {
                   </td>
                   <td style={{ display: 'flex', gap: 6 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>Editar</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Borrar</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}>Borrar</button>
                   </td>
                 </tr>
               ))}
@@ -208,6 +227,7 @@ export default function Partidos() {
                     <select value={form.es_local} onChange={e => set('es_local', e.target.value)}>
                       <option value="true">Local</option>
                       <option value="false">Visitante</option>
+                      <option value="neutral">Sede neutra</option>
                     </select>
                   </div>
                   <div className="form-group full">
@@ -215,14 +235,25 @@ export default function Partidos() {
                     <input value={form.rival} onChange={e => set('rival', e.target.value)} required placeholder="ej: Real Madrid" />
                   </div>
                   <div className="form-group">
+                    <label>Jornada / fase</label>
+                    <input
+                      value={form.jornada}
+                      onChange={e => set('jornada', e.target.value)}
+                      placeholder="ej: 1, Cuartos de final, Semifinal..."
+                    />
+                  </div>
+                  <div className="form-group">
                     <label>Puntos Unicaja</label>
-                    <input type="number" value={form.puntos_unicaja} onChange={e => set('puntos_unicaja', e.target.value)} placeholder="85" min={0} />
+                    <input value={editId ? (form.puntos_unicaja !== '' ? form.puntos_unicaja : '— (aún sin stats)') : 'Calculo automático'} disabled />
                   </div>
                   <div className="form-group">
                     <label>Puntos rival</label>
                     <input type="number" value={form.puntos_rival} onChange={e => set('puntos_rival', e.target.value)} placeholder="80" min={0} />
                   </div>
                 </div>
+                <p style={{ fontSize: 12, color: 'var(--gris-500)', marginTop: 10, marginBottom: 20 }}>
+                  Los puntos del Unicaja se calculan automaticamente sumando los puntos de cada jugador cuando metas sus estadísticas del partido.
+                </p>
                 <div className="form-actions">
                   <button type="button" className="btn btn-ghost" onClick={() => setModal(false)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary" disabled={saving}>
@@ -230,6 +261,36 @@ export default function Partidos() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !deleting && setConfirmDelete(null)}>
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <h3>Eliminar partido</h3>
+              <button className="btn-close" onClick={() => setConfirmDelete(null)} disabled={deleting}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--gris-300)', lineHeight: 1.6 }}>
+                ¿Eliminar el partido contra <strong style={{ color: 'var(--blanco)' }}>{confirmDelete.rival}</strong>
+                {confirmDelete.fecha ? ` (${new Date(confirmDelete.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })})` : ''}?
+              </p>
+              <div style={{
+                marginTop: 14, padding: '12px 14px', borderRadius: 'var(--radius)',
+                background: 'rgba(230, 80, 60, 0.12)', border: '1px solid rgba(230, 80, 60, 0.35)',
+                fontSize: 13.5, color: '#e8917f', lineHeight: 1.6,
+              }}>
+                Se eliminarán también todas las estadísticas de los jugadores en este partido. Esta acción no se puede deshacer.
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(null)} disabled={deleting}>Cancelar</button>
+                <button type="button" className="btn btn-danger" onClick={ejecutarDelete} disabled={deleting}>
+                  {deleting ? <><span className="spinner" /> Eliminando...</> : 'Eliminar definitivamente'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
