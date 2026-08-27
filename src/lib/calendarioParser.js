@@ -25,10 +25,24 @@ const MESES_MAP = {
   octubre: 10, oct: 10,
   noviembre: 11, nov: 11,
   diciembre: 12, dic: 12,
+  // Inglés (webs como championsleague.basketball u otras de la BCL)
+  january: 1, jan: 1,
+  february: 2,
+  march: 3,
+  april: 4, apr: 4,
+  june: 6,
+  july: 7, jul: 7,
+  august: 8, aug: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12, dec: 12,
 }
 
 const RE_FECHA_NUM = /\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\b/
 const RE_FECHA_TEXTO = /\b(\d{1,2})\s+de\s+([a-zñáéíóúA-ZÑÁÉÍÓÚ]+)(?:\s+de\s+(\d{4}))?\b/i
+// Formato inglés: "Oct 7", "October 7, 2026" (webs como championsleague.basketball)
+const RE_FECHA_TEXTO_EN = /\b([A-Za-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b/
 const RE_JORNADA = /\bJ(?:ornada)?\.?\s*(\d{1,2})\b/i
 // Fases de playoff / eliminatorias, que en ACB (y en Copa del Rey, etc.)
 // sustituyen a la jornada numérica al final de temporada.
@@ -37,6 +51,9 @@ const RE_HORA = /\b\d{1,2}[:.h]\d{2}\b/gi
 // Partidos sin horario todavía confirmado: la web los marca como "XX:XX"
 // o "--:--" en vez de una hora real.
 const RE_HORA_PENDIENTE = /\b(?:[Xx]{1,2}|-{1,2})[:.h](?:[Xx]{1,2}|-{1,2})\b/g
+// Reconoce "Unicaja" por el nombre completo, o por el código corto "UNI"
+// que usan algunas webs (ej. championsleague.basketball de la BCL).
+const RE_ES_UNICAJA = /unicaja|\buni\b/i
 
 // Palabras sueltas que suelen colarse detrás del nombre del equipo en
 // calendarios web (enlaces de "ver ficha del partido", "comprar
@@ -87,6 +104,11 @@ function detectarFecha(linea, anioTemporadaInicio) {
     const mesNum = MESES_MAP[mTexto[2].toLowerCase()]
     if (mesNum) return normalizarFecha(Number(mTexto[1]), mesNum, mTexto[3], anioTemporadaInicio)
   }
+  const mTextoEn = linea.match(RE_FECHA_TEXTO_EN)
+  if (mTextoEn) {
+    const mesNum = MESES_MAP[mTextoEn[1].toLowerCase()]
+    if (mesNum) return normalizarFecha(Number(mTextoEn[2]), mesNum, mTextoEn[3], anioTemporadaInicio)
+  }
   return null
 }
 
@@ -119,7 +141,7 @@ export function parseCalendarText(texto, anioTemporadaInicio = null) {
     if (fechaEnLinea) fechaActual = fechaEnLinea
 
     if (!fechaActual) continue
-    if (!/unicaja/i.test(linea)) continue
+    if (!RE_ES_UNICAJA.test(linea)) continue
 
     // El nombre de cada equipo puede venir partido en varias líneas al
     // limpiar el HTML (nombre, código, guion...), y el rival puede
@@ -158,8 +180,8 @@ export function parseCalendarText(texto, anioTemporadaInicio = null) {
     const eqMatch = contextoLimpio.match(RE_ENFRENTAMIENTO)
     if (eqMatch) {
       const [, a, b] = eqMatch
-      const aEsUnicaja = /unicaja/i.test(a)
-      const bEsUnicaja = /unicaja/i.test(b)
+      const aEsUnicaja = RE_ES_UNICAJA.test(a)
+      const bEsUnicaja = RE_ES_UNICAJA.test(b)
       if (aEsUnicaja && !bEsUnicaja) { esLocal = true; rival = limpiarNombreEquipo(b) }
       else if (bEsUnicaja && !aEsUnicaja) { esLocal = false; rival = limpiarNombreEquipo(a) }
     }

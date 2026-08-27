@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { parseCalendarText } from '../../lib/calendarioParser'
+import { parseICS } from '../../lib/icsParser'
 import toast from 'react-hot-toast'
 
 let nextRowId = 1
@@ -85,7 +86,52 @@ export default function ImportarCalendario() {
   }
 
   const cargarFilas = (detectadas) => {
-    setFilas(detectadas.map(d => ({ ...d, id: nextRowId++ })))
+    setFilas(detectadas.map(d => ({
+      ...d,
+      id: nextRowId++,
+      // Si el detector ya trae su propia competición (caso del .ics, que
+      // mezcla ACB y BCL), se usa esa; si no (URL/texto), se usa la que
+      // esté elegida arriba.
+      competicionId: d.competicionId ?? competicionId,
+    })))
+  }
+
+  // ── Importar desde un fichero .ics ───────────────────────────────────
+  // Mucho más fiable que leer una URL: usa campos estructurados del
+  // propio fichero en vez de adivinar a partir del HTML de una web.
+  const [icsLoading, setIcsLoading] = useState(false)
+  const manejarArchivoIcs = async (e) => {
+    const file = e.target.files[0]
+    e.target.value = '' // permite volver a subir el mismo fichero si hace falta
+    if (!file) return
+    setIcsLoading(true)
+    try {
+      const texto = await file.text()
+      const detectadas = parseICS(texto)
+      if (detectadas.length === 0) {
+        toast.error('No se ha detectado ningún partido del Unicaja en ese fichero .ics')
+        return
+      }
+      // Mapea el nombre de competición del .ics a una competición real
+      // de la base de datos (por nombre, sin distinguir mayúsculas). Si
+      // no encuentra ninguna coincidencia, la fila se queda sin
+      // competición asignada para que se elija a mano.
+      const conCompeticion = detectadas.map(d => {
+        const match = competiciones.find(c => c.nombre.toLowerCase() === (d.competicionNombre || '').toLowerCase())
+        return { ...d, competicionId: match ? String(match.id) : '' }
+      })
+      setFilas(conCompeticion.map(d => ({ ...d, id: nextRowId++ })))
+      const sinMapear = conCompeticion.filter(d => !d.competicionId).length
+      toast.success(
+        sinMapear > 0
+          ? `${detectadas.length} partido(s) detectado(s), ${sinMapear} sin competición reconocida (elígela a mano en su fila)`
+          : `${detectadas.length} partido(s) detectado(s)`
+      )
+    } catch (err) {
+      toast.error(`No se ha podido leer el fichero: ${err.message || 'error desconocido'}`)
+    } finally {
+      setIcsLoading(false)
+    }
   }
 
   const actualizarFila = (id, campo, valor) => {
@@ -96,26 +142,32 @@ export default function ImportarCalendario() {
     setFilas(f => f.filter(row => row.id !== id))
   }
 
-  const filasValidas = filas.filter(f => f.fecha && f.rival.trim())
+  const filasValidas = filas.filter(f => f.fecha && f.rival.trim() && f.competicionId)
   const filasInvalidas = filas.length - filasValidas.length
 
   const guardarCalendario = async () => {
-    if (!temporadaId || !competicionId) {
-      toast.error('Selecciona temporada y competición')
+    if (!temporadaId) {
+      toast.error('Selecciona la temporada')
       return
     }
     if (filasValidas.length === 0) {
-      toast.error('No hay partidos válidos para guardar (falta fecha o rival)')
+      toast.error('No hay partidos válidos para guardar (falta fecha, rival o competición)')
       return
     }
     setSaving(true)
+
+    // Puede haber varias competiciones a la vez en el mismo guardado
+    // (ej. al importar un .ics que mezcla ACB y BCL), así que "sustituir"
+    // y la comprobación de duplicados se hacen para cada competición que
+    // aparezca entre las filas a guardar, no solo para una.
+    const competicionIdsPresentes = [...new Set(filasValidas.map(f => Number(f.competicionId)))]
 
     if (sustituir) {
       const { error: delError } = await supabase
         .from('partidos')
         .delete()
         .eq('temporada_id', Number(temporadaId))
-        .eq('competicion_id', Number(competicionId))
+        .in('competicion_id', competicionIdsPresentes)
       if (delError) {
         setSaving(false)
         toast.error('Error al sustituir el calendario existente')
@@ -129,23 +181,27 @@ export default function ImportarCalendario() {
     if (!sustituir) {
       const { data } = await supabase
         .from('partidos')
-        .select('fecha, rival')
+        .select('fecha, rival, competicion_id')
         .eq('temporada_id', Number(temporadaId))
-        .eq('competicion_id', Number(competicionId))
+        .in('competicion_id', competicionIdsPresentes)
       existentes = data || []
     }
-    const yaExiste = (fecha, rival) =>
-      existentes.some(e => e.fecha === fecha && e.rival.trim().toLowerCase() === rival.trim().toLowerCase())
+    const yaExiste = (fecha, rival, competicionId) =>
+      existentes.some(e =>
+        e.fecha === fecha &&
+        e.rival.trim().toLowerCase() === rival.trim().toLowerCase() &&
+        e.competicion_id === Number(competicionId)
+      )
 
     const aInsertar = filasValidas
-      .filter(f => !yaExiste(f.fecha, f.rival))
+      .filter(f => !yaExiste(f.fecha, f.rival, f.competicionId))
       .map(f => ({
         fecha: f.fecha,
         rival: f.rival.trim(),
         es_local: f.esLocal === 'neutral' ? null : !!f.esLocal,
         jornada: f.jornada ? String(f.jornada).trim() : null,
         temporada_id: Number(temporadaId),
-        competicion_id: Number(competicionId),
+        competicion_id: Number(f.competicionId),
       }))
     const omitidos = filasValidas.length - aInsertar.length
 
@@ -200,7 +256,7 @@ export default function ImportarCalendario() {
       <div className="page-header">
         <div>
           <h2>Importar calendario</h2>
-          <p>Pega una URL o escribe el calendario a mano y se actualizará en la página pública</p>
+          <p>Sube un .ics, pega una URL, y se actualizará en la página pública</p>
         </div>
       </div>
 
@@ -212,10 +268,14 @@ export default function ImportarCalendario() {
           </select>
         </div>
         <div className="form-group">
-          <label>Competición *</label>
+          <label>Competición por defecto</label>
           <select value={competicionId} onChange={e => setCompeticionId(e.target.value)}>
             {competiciones.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
+          <p style={{ fontSize: 11.5, color: 'var(--gris-500)', marginTop: 6 }}>
+            Se usa al importar desde URL o al añadir una fila a mano. Si importas un .ics, cada partido ya
+            trae su propia competición (puedes corregirla fila a fila si hace falta).
+          </p>
         </div>
       </div>
 
@@ -241,6 +301,23 @@ export default function ImportarCalendario() {
             desde la pestaña "Partidos".
           </p>
         </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
+          <div style={{ flex: 1, height: 1, background: 'var(--gris-700)' }} />
+          <span style={{ fontSize: 12, color: 'var(--gris-500)' }}>o</span>
+          <div style={{ flex: 1, height: 1, background: 'var(--gris-700)' }} />
+        </div>
+
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label>Fichero .ics (calendario descargado desde unicajabaloncesto.com)</label>
+          <input type="file" accept=".ics,text/calendar" onChange={manejarArchivoIcs} disabled={icsLoading} />
+          <p style={{ fontSize: 12, color: 'var(--gris-500)', marginTop: 10, lineHeight: 1.6 }}>
+            Es la opción más fiable: el .ics ya trae la fecha, el rival, si es local o visitante y la
+            competición de cada partido, sin tener que adivinar nada de una web. Detecta automáticamente si
+            un partido es de ACB o de BCL, aunque estén mezclados en el mismo fichero.
+          </p>
+          {icsLoading && <p style={{ fontSize: 12.5, color: 'var(--gris-500)' }}><span className="spinner" /> Leyendo fichero...</p>}
+        </div>
       </div>
 
       {filas.length > 0 && (
@@ -253,6 +330,7 @@ export default function ImportarCalendario() {
                   <th>Fecha</th>
                   <th>Rival</th>
                   <th>Condición</th>
+                  <th>Competición</th>
                   <th></th>
                 </tr>
               </thead>
@@ -294,6 +372,16 @@ export default function ImportarCalendario() {
                           <option value="neutral">Sede neutra</option>
                         </select>
                       </td>
+                      <td style={{ width: 140 }}>
+                        <select
+                          value={f.competicionId || ''}
+                          onChange={e => actualizarFila(f.id, 'competicionId', e.target.value)}
+                          style={!f.competicionId ? { borderColor: '#e8917f' } : undefined}
+                        >
+                          <option value="">Elegir...</option>
+                          {competiciones.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                        </select>
+                      </td>
                       <td style={{ width: 40 }}>
                         <button type="button" className="btn btn-danger btn-sm" onClick={() => borrarFila(f.id)}>×</button>
                       </td>
@@ -307,7 +395,7 @@ export default function ImportarCalendario() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--gris-300)', width: 'auto' }}>
               <input type="checkbox" checked={sustituir} onChange={e => setSustituir(e.target.checked)} style={{ width: 'auto' }} />
-              Sustituir el calendario existente de esta competición (borra los partidos actuales antes de guardar)
+              Sustituir el calendario existente de esas competiciones (borra los partidos actuales antes de guardar)
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {filasInvalidas > 0 && (
