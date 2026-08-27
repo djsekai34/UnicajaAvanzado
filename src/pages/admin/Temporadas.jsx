@@ -126,7 +126,7 @@ export default function Temporadas() {
     if (copiarPlantilla && temporadaAnterior) {
       const { data: jugadoresAnteriores } = await supabase
         .from('jugadores')
-        .select('nombre, dorsal, posicion, nacionalidad, foto_url, es_cupo')
+        .select('nombre, dorsal, posicion, posicion_secundaria, nacionalidad, foto_url, es_cupo')
         .eq('temporada_id', temporadaAnterior.id)
         .eq('activo', true)
 

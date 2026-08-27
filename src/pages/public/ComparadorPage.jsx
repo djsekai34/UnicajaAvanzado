@@ -453,7 +453,7 @@ export default function ComparadorPage() {
                     marginTop: 2,
                   }}
                 >
-                  {d.jugador.posicion} · {d.partidos} partidos
+                  {d.jugador.posicion}{d.jugador.posicion_secundaria ? ` / ${d.jugador.posicion_secundaria}` : ''} · {d.partidos} partidos
                 </div>
               </div>
             ))}

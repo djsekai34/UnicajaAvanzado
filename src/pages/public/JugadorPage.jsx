@@ -215,7 +215,7 @@ export default function JugadorPage() {
                 )}
               </div>
               <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
-                <span className="pos-pill">{jugador.posicion}</span>
+                <span className="pos-pill">{jugador.posicion}{jugador.posicion_secundaria ? ` / ${jugador.posicion_secundaria}` : ''}</span>
                 <span style={{ fontSize:13, color:'var(--gris-500)' }}>{jugador.nacionalidad}</span>
                 <span style={{ fontSize:13, color:'var(--gris-500)' }}>· {jugador.temporadas?.nombre}</span>
               </div>

@@ -382,7 +382,7 @@ export default function EstadisticasPage() {
                           <span style={{ fontFamily:'var(--font-display)', fontWeight:700, color:'var(--verde)', fontSize:13 }}>#{r.jugador.dorsal}</span>
                           <div>
                             <div style={{ fontWeight:600, color:'var(--blanco)' }}>{r.jugador.nombre}</div>
-                            <div style={{ fontSize:11, color:'var(--gris-500)' }}>{r.jugador.posicion}</div>
+                            <div style={{ fontSize:11, color:'var(--gris-500)' }}>{r.jugador.posicion}{r.jugador.posicion_secundaria ? ` / ${r.jugador.posicion_secundaria}` : ''}</div>
                           </div>
                           {!r.jugador.activo && (
                             <span
@@ -659,7 +659,7 @@ export default function EstadisticasPage() {
                   { label: 'FP/40 — Faltas personales por 40 min', formula: 'FP / Minutos × 40', desc: 'Ritmo de faltas normalizado a 40 minutos, para comparar jugadores con distinto tiempo de juego. Un valor alto puede indicar un defensor agresivo o con problemas de disciplina; en pívots interiores suele ser algo más alto que en exteriores.' },
                 ]},
                 { grupo: 'Peso en el equipo', items: [
-                  { label: 'APORT% — % Aportación al equipo', formula: '100 × (PTS+REB+AST+ROB+TAP jugador) / (PTS+REB+AST+ROB+TAP equipo)', desc: 'Qué parte de la producción total del equipo (puntos, rebotes, asistencias, robos y tapones sumados) pone este jugador. Usa los totales reales del equipo en los partidos que jugó. Cuanto más alto, más peso tiene en el juego del equipo.' },
+                  { label: 'APORT% — % Aportación al equipo', formula: '100 × (PTS+REB+AST+ROB+TAP jugador) / (PTS+REB+AST+ROB+TAP equipo)', desc: 'Qué parte de la producción total del equipo (puntos, rebotes, asistencias, robos y tapones sumados) pone este jugador. Usa los totales reales del equipo en los partidos que jugó, no una estimación. Cuanto más alto, más peso tiene en el juego del equipo.' },
                   { label: 'MIN% — % Minutos del equipo', formula: '100 × Minutos jugador / Minutos totales del equipo', desc: 'Qué parte de los minutos totales disponibles (los de los 5 jugadores en pista sumados) se lleva este jugador. Indica cuánta confianza/rol tiene dentro de la rotación.' },
                 ]},
                 { grupo: 'Ratings y eficiencia global', items: [

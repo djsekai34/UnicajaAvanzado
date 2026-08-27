@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const POSICIONES = ['Base', 'Escolta', 'Alero', 'Ala-Pívot', 'Pívot']
-const emptyForm = { nombre: '', dorsal: '', posicion: 'Base', nacionalidad: '', activo: true, foto_url: '', es_cupo: false }
+const emptyForm = { nombre: '', dorsal: '', posicion: 'Base', posicion_secundaria: '', nacionalidad: '', activo: true, foto_url: '', es_cupo: false }
 
 export default function Jugadores() {
   const [jugadores, setJugadores] = useState([])
@@ -41,7 +41,7 @@ export default function Jugadores() {
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setModal(true) }
   const openEdit = (j) => {
-    setForm({ nombre: j.nombre, dorsal: j.dorsal != null ? String(j.dorsal) : '', posicion: j.posicion || 'Base', nacionalidad: j.nacionalidad || '', activo: j.activo, foto_url: j.foto_url || '', es_cupo: !!j.es_cupo })
+    setForm({ nombre: j.nombre, dorsal: j.dorsal != null ? String(j.dorsal) : '', posicion: j.posicion || 'Base', posicion_secundaria: j.posicion_secundaria || '', nacionalidad: j.nacionalidad || '', activo: j.activo, foto_url: j.foto_url || '', es_cupo: !!j.es_cupo })
     setEditId(j.id)
     setModal(true)
   }
@@ -68,6 +68,7 @@ export default function Jugadores() {
       nombre: form.nombre.trim(),
       dorsal: form.dorsal ? Number(form.dorsal) : null,
       posicion: form.posicion,
+      posicion_secundaria: form.posicion_secundaria || null,
       nacionalidad: form.nacionalidad.trim(),
       activo: form.activo,
       temporada_id: Number(temporadaId),
@@ -124,7 +125,10 @@ export default function Jugadores() {
     load()
   }
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k, v) => setForm(f => {
+    if (k === 'posicion' && v === f.posicion_secundaria) return { ...f, posicion: v, posicion_secundaria: '' }
+    return { ...f, [k]: v }
+  })
 
   const activos = jugadores.filter(j => j.activo)
   const bajas = jugadores.filter(j => !j.activo)
@@ -175,7 +179,7 @@ export default function Jugadores() {
                     {j.nombre}
                     {j.es_cupo && <span className="badge badge-super" style={{ marginLeft: 8 }}>Cupo</span>}
                   </td>
-                  <td><span className="pos-pill">{j.posicion}</span></td>
+                  <td><span className="pos-pill">{j.posicion}{j.posicion_secundaria ? ` / ${j.posicion_secundaria}` : ''}</span></td>
                   <td>{j.nacionalidad || '—'}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -221,7 +225,7 @@ export default function Jugadores() {
                       {j.nombre}
                       {j.es_cupo && <span className="badge badge-super" style={{ marginLeft: 8 }}>Cupo</span>}
                     </td>
-                    <td><span className="pos-pill">{j.posicion}</span></td>
+                    <td><span className="pos-pill">{j.posicion}{j.posicion_secundaria ? ` / ${j.posicion_secundaria}` : ''}</span></td>
                     <td>{j.nacionalidad || '—'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -277,6 +281,13 @@ export default function Jugadores() {
                     <label>Posición</label>
                     <select value={form.posicion} onChange={e => set('posicion', e.target.value)}>
                       {POSICIONES.map(p => <option key={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Posición secundaria</label>
+                    <select value={form.posicion_secundaria} onChange={e => set('posicion_secundaria', e.target.value)}>
+                      <option value="">Ninguna</option>
+                      {POSICIONES.filter(p => p !== form.posicion).map(p => <option key={p}>{p}</option>)}
                     </select>
                   </div>
                   <div className="form-group">

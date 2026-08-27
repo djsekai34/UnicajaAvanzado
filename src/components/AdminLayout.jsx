@@ -27,6 +27,11 @@ const IconUpload = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 12v9m0-9l-3 3m3-3l3 3" />
   </svg>
 )
+const IconEscudo = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+  </svg>
+)
 const IconLogout = () => (
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} width={16} height={16}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -63,6 +68,9 @@ export default function AdminLayout() {
           </NavLink>
           <NavLink to="/admin/calendario-importar" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             <IconUpload /> Importar calendario
+          </NavLink>
+          <NavLink to="/admin/escudos" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            <IconEscudo /> Escudos de equipos
           </NavLink>
         </nav>
 

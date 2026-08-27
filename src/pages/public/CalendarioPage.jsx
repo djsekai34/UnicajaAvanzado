@@ -1,40 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import AniversarioBadge from '../../components/public/AniversarioBadge'
+import { competicionInfo, formatJornada } from '../../lib/competiciones'
 
 const RECINTO_LOCAL = 'Palacio de los Deportes José María Martín Carpena'
-
-// Colores/abreviaturas por competición (coinciden con los `nombre` de la
-// tabla `competiciones`: ACB, BCL, Copa del Rey, Supercopa, Intercontinental).
-// Cualquier competición nueva que no esté aquí cae en un estilo neutro por
-// defecto — no hace falta tocar este fichero al añadir partidos de otra
-// competición desde el admin, solo se pintará en gris hasta que se le
-// asigne un color propio.
-const COMPETICIONES = {
-  'ACB': { color: 'var(--verde)', abbr: 'ACB' },
-  'BCL': { color: '#3B82F6', abbr: 'BCL' },
-  'Copa del Rey': { color: 'var(--warning)', abbr: 'Copa' },
-  'Supercopa': { color: 'var(--lima)', abbr: 'SCopa' },
-  'Intercontinental': { color: '#8B5CF6', abbr: 'Inter' },
-}
-const COMPETICION_DEFAULT = { color: 'var(--gris-400)', abbr: '—' }
-
-function competicionInfo(nombre) {
-  return COMPETICIONES[nombre] || { ...COMPETICION_DEFAULT, abbr: nombre?.slice(0, 5) || '—' }
-}
-
-// La jornada puede ser "Jornada 12" (liga regular) o el nombre de una fase
-// de playoff ("Cuartos de final", "Semifinales", "Final"...) — se muestra
-// distinto según el caso: corto tipo "J12" en la rejilla, o el nombre de
-// la fase tal cual si no es una jornada numerada.
-function formatJornada(jornada) {
-  if (!jornada) return { corto: '', largo: '' }
-  const valor = String(jornada).trim()
-  const m = valor.match(/^(?:Jornada\s+|J\s*)?(\d+)$/i)
-  if (m) return { corto: `J${m[1]}`, largo: `Jornada ${m[1]}` }
-  if (/^F4$|^Final\s*Four$/i.test(valor)) return { corto: 'F4', largo: 'Final Four' }
-  return { corto: valor, largo: valor }
-}
 
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -77,6 +47,10 @@ function generarRejillaMes(year, monthIndex) {
 export default function CalendarioPage() {
   const hoy = new Date()
   const hoyISO = toISO(hoy)
+  // Si venimos de la página de un partido (botón "Volver al calendario"),
+  // se abre el mes de ese partido en vez del mes actual.
+  const location = useLocation()
+  const fechaObjetivo = location.state?.fecha || null
 
   const [temporada, setTemporada] = useState(null)
   const [partidos, setPartidos] = useState([])
@@ -113,10 +87,16 @@ export default function CalendarioPage() {
   }, [partidos, hoyISO])
 
   useEffect(() => {
-    if (!partidoRef || cursor) return
+    if (cursor) return
+    if (fechaObjetivo) {
+      const [y, m] = fechaObjetivo.split('-').map(Number)
+      setCursor({ year: y, month: m - 1 })
+      return
+    }
+    if (!partidoRef) return
     const [y, m] = partidoRef.fecha.split('-').map(Number)
     setCursor({ year: y, month: m - 1 })
-  }, [partidoRef, cursor])
+  }, [partidoRef, cursor, fechaObjetivo])
 
   const partidosPorFecha = useMemo(() => {
     const mapa = {}
@@ -239,48 +219,52 @@ export default function CalendarioPage() {
           {cursor && (
             <div className="calendario-mes">
               <div className="calendario-mes-header">
-                <button
-                  type="button"
-                  className="calendario-nav-btn"
-                  onClick={() => cambiarMes(-1)}
-                  disabled={!puedeRetroceder}
-                  aria-label="Mes anterior"
-                >
-                  ‹
-                </button>
-                <div className="calendario-mes-titulo">
-                  {MESES[cursor.month].charAt(0).toUpperCase() + MESES[cursor.month].slice(1)} {cursor.year}
+                <div className="calendario-mes-nav">
+                  <button
+                    type="button"
+                    className="calendario-nav-btn"
+                    onClick={() => cambiarMes(-1)}
+                    disabled={!puedeRetroceder}
+                    aria-label="Mes anterior"
+                  >
+                    ‹
+                  </button>
+                  <div className="calendario-mes-titulo">
+                    {MESES[cursor.month].charAt(0).toUpperCase() + MESES[cursor.month].slice(1)} {cursor.year}
+                  </div>
+                  <button
+                    type="button"
+                    className="calendario-nav-btn"
+                    onClick={() => cambiarMes(1)}
+                    disabled={!puedeAvanzar}
+                    aria-label="Mes siguiente"
+                  >
+                    ›
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="calendario-nav-btn"
-                  onClick={() => cambiarMes(1)}
-                  disabled={!puedeAvanzar}
-                  aria-label="Mes siguiente"
-                >
-                  ›
-                </button>
-                <select
-                  className="calendario-select-mes"
-                  value={cursor.month}
-                  onChange={e => irAMes(cursor.year, Number(e.target.value))}
-                  aria-label="Ir a mes"
-                >
-                  {MESES.map((m, i) => (
-                    <option key={m} value={i}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
-                  ))}
-                </select>
-                <select
-                  className="calendario-select-anio"
-                  value={cursor.year}
-                  onChange={e => irAMes(Number(e.target.value), cursor.month)}
-                  aria-label="Ir a año"
-                >
-                  {aniosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-                <button type="button" className="calendario-hoy-btn" onClick={irAHoy}>
-                  Hoy
-                </button>
+                <div className="calendario-mes-filtros">
+                  <select
+                    className="calendario-select-mes"
+                    value={cursor.month}
+                    onChange={e => irAMes(cursor.year, Number(e.target.value))}
+                    aria-label="Ir a mes"
+                  >
+                    {MESES.map((m, i) => (
+                      <option key={m} value={i}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="calendario-select-anio"
+                    value={cursor.year}
+                    onChange={e => irAMes(Number(e.target.value), cursor.month)}
+                    aria-label="Ir a año"
+                  >
+                    {aniosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                  <button type="button" className="calendario-hoy-btn" onClick={irAHoy}>
+                    Hoy
+                  </button>
+                </div>
               </div>
 
               <div className="calendario-grid">
@@ -297,7 +281,7 @@ export default function CalendarioPage() {
                       className={`calendario-grid-celda${esDelMes ? '' : ' fuera-de-mes'}${esHoy ? ' es-hoy' : ''}`}
                     >
                       <div className="calendario-grid-numero">{fecha.getDate()}</div>
-                      {partidosDia.map(p => {
+                      {partidosDia.slice(0, 2).map(p => {
                         const info = competicionInfo(p.competiciones?.nombre)
                         const jugado = p.puntos_unicaja != null && p.puntos_rival != null
                         const ganado = jugado && p.puntos_unicaja > p.puntos_rival
@@ -308,10 +292,13 @@ export default function CalendarioPage() {
                           ? `Unicaja - ${p.rival} (sede neutra)`
                           : p.es_local ? 'Unicaja vs ' + p.rival : p.rival + ' vs Unicaja'
                         const titulo = `${info.abbr}${tituloJornada} · ${tituloRival} · ${fmtFechaLarga(fechaISO)}${tituloResultado}`
+                        const Contenedor = jugado ? Link : 'div'
+                        const propsContenedor = jugado ? { to: `/partido/${p.id}` } : {}
                         return (
-                          <div
+                          <Contenedor
                             key={p.id}
-                            className={`calendario-grid-partido${p.es_local === null ? ' neutral' : p.es_local ? ' local' : ' visitante'}`}
+                            {...propsContenedor}
+                            className={`calendario-grid-partido${p.es_local === null ? ' neutral' : p.es_local ? ' local' : ' visitante'}${jugado ? ' con-link' : ''}`}
                             style={{ borderLeftColor: info.color }}
                             title={titulo}
                           >
@@ -324,9 +311,12 @@ export default function CalendarioPage() {
                                 {p.puntos_unicaja}-{p.puntos_rival}
                               </span>
                             )}
-                          </div>
+                          </Contenedor>
                         )
                       })}
+                      {partidosDia.length > 2 && (
+                        <div className="calendario-grid-mas">+{partidosDia.length - 2} más</div>
+                      )}
                     </div>
                   )
                 })}
@@ -388,6 +378,19 @@ export default function CalendarioPage() {
           flex-wrap: wrap;
           gap: 12px;
           margin-bottom: 14px;
+        }
+        .calendario-mes-nav {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          min-width: 0;
+        }
+        .calendario-mes-filtros {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
         }
         .calendario-mes-titulo {
           font-family: var(--font-display);
@@ -465,6 +468,7 @@ export default function CalendarioPage() {
           border: 1px solid var(--gris-700);
           border-radius: var(--radius);
           min-height: 84px;
+          min-width: 0;
           padding: 6px;
           display: flex;
           flex-direction: column;
@@ -483,7 +487,10 @@ export default function CalendarioPage() {
           flex-direction: column;
           gap: 1px;
           overflow: hidden;
+          text-decoration: none;
         }
+        .calendario-grid-partido.con-link { cursor: pointer; }
+        .calendario-grid-partido.con-link:hover { filter: brightness(1.25); }
         .calendario-grid-partido.local { background: rgba(78,158,71,.12); }
         .calendario-grid-partido.neutral { background: rgba(234,179,8,.12); }
         .calendario-grid-comp { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
@@ -501,6 +508,10 @@ export default function CalendarioPage() {
         }
         .calendario-grid-resultado.ganado { color: #4ADE80; }
         .calendario-grid-resultado.perdido { color: #F87171; }
+        .calendario-grid-mas {
+          font-size: 9.5px; color: var(--gris-500); text-align: center;
+          padding: 1px 0;
+        }
 
         .calendario-leyenda {
           display: flex;
@@ -524,10 +535,16 @@ export default function CalendarioPage() {
         .calendario-leyenda-swatch.visitante { background: var(--gris-700); border: 1px solid var(--gris-600); }
 
         @media (max-width: 640px) {
-          .calendario-grid { gap: 4px; }
-          .calendario-grid-celda { min-height: 62px; padding: 4px; }
-          .calendario-grid-rival { font-size: 9.5px; }
-          .calendario-grid-comp { font-size: 8px; }
+          .calendario-mes-header { flex-direction: column; align-items: stretch; gap: 10px; }
+          .calendario-mes-filtros { justify-content: center; width: 100%; }
+          .calendario-grid { gap: 3px; }
+          .calendario-grid-celda { min-height: 76px; padding: 3px; gap: 2px; }
+          .calendario-grid-numero { font-size: 11px; }
+          .calendario-grid-partido { padding: 2px 4px; }
+          .calendario-grid-comp { display: none; }
+          .calendario-grid-rival { font-size: 10px; }
+          .calendario-grid-resultado { font-size: 9px; }
+          .calendario-grid-mas { font-size: 8.5px; }
           .calendario-mes-titulo { font-size: 15px; }
           .calendario-proximo-lugar { display: none; }
         }
