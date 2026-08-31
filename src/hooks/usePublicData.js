@@ -64,18 +64,44 @@ export function usePublicData() {
   }, [temporadaId])
 
   // Partidos filtrados
+  // Los "Amistosos" se muestran normales, mezclados con todo, hasta que
+  // ya se haya JUGADO el primer partido de una competición oficial (ACB,
+  // BCL, Copa del Rey, Supercopa, Intercontinental) en la temporada. A
+  // partir de ese momento pasan a la regla especial: solo se ven si se
+  // selecciona expresamente el filtro "Amistosos" (y ahí se ignoran
+  // mes/fechas).
+  const OFICIALES = ['ACB', 'BCL', 'Copa del Rey', 'Supercopa', 'Intercontinental']
+  const amistosoId = useMemo(
+    () => competiciones.find(c => c.nombre === 'Amistosos')?.id ?? null,
+    [competiciones]
+  )
+  const haOficialJugado = useMemo(
+    () => partidos.some(p =>
+      OFICIALES.includes(p.competiciones?.nombre) &&
+      p.puntos_unicaja != null && p.puntos_rival != null
+    ),
+    [partidos]
+  )
+  const esFiltroAmistoso = amistosoId != null && compId === String(amistosoId)
+
   const partidosFiltrados = useMemo(() => {
     return partidos.filter(p => {
-      if (compId !== 'todas' && String(p.competicion_id) !== compId) return false
-      if (mes !== 'todos') {
-        const m = new Date(p.fecha).getMonth() + 1
-        if (String(m) !== mes) return false
+      if (compId !== 'todas') {
+        if (String(p.competicion_id) !== compId) return false
+      } else if (haOficialJugado && amistosoId != null && p.competicion_id === amistosoId) {
+        return false
       }
-      if (fechaDesde && p.fecha < fechaDesde) return false
-      if (fechaHasta && p.fecha > fechaHasta) return false
+      if (!esFiltroAmistoso) {
+        if (mes !== 'todos') {
+          const m = new Date(p.fecha).getMonth() + 1
+          if (String(m) !== mes) return false
+        }
+        if (fechaDesde && p.fecha < fechaDesde) return false
+        if (fechaHasta && p.fecha > fechaHasta) return false
+      }
       return true
     })
-  }, [partidos, compId, mes, fechaDesde, fechaHasta])
+  }, [partidos, compId, mes, fechaDesde, fechaHasta, amistosoId, esFiltroAmistoso, haOficialJugado])
 
   const partidoIds = useMemo(() => new Set(partidosFiltrados.map(p => p.id)), [partidosFiltrados])
 

@@ -105,10 +105,22 @@ export default function JugadorPage() {
   if (loading) return <div className="loading-screen"><div className="spinner"/></div>
   if (!jugador) return <div className="empty-state"><p>Jugador no encontrado</p></div>
 
-  // Filtrar por competición
+  // Filtrar por competición. Los "Amistosos" se ven normales, mezclados
+  // con todo, hasta que ya se haya JUGADO el primer partido de una
+  // competición oficial (ACB, BCL, Copa del Rey, Supercopa,
+  // Intercontinental) en la temporada — a partir de ahí, solo se ven si
+  // se selecciona expresamente el filtro "Amistosos".
+  const OFICIALES = ['ACB', 'BCL', 'Copa del Rey', 'Supercopa', 'Intercontinental']
+  const amistosoId = competiciones.find(c => c.nombre === 'Amistosos')?.id ?? null
+  const haOficialJugado = partidos.some(p =>
+    OFICIALES.includes(p.competiciones?.nombre) &&
+    p.puntos_unicaja != null && p.puntos_rival != null
+  )
   const statsFiltradas = stats.filter(s => {
-    if (filtroComp === 'todas') return true
     const p = partidos.find(p => p.id === s.partido_id)
+    if (filtroComp === 'todas') {
+      return !(haOficialJugado && amistosoId != null && p?.competicion_id === amistosoId)
+    }
     return p && String(p.competicion_id) === filtroComp
   })
 

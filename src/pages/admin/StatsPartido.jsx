@@ -55,6 +55,31 @@ const CAMPOS = [
 
 const emptyStats = () => Object.fromEntries(CAMPOS.map(c => [c.key, '']))
 
+// Los minutos se escriben como en cualquier acta de baloncesto: "34:12"
+// (34 min y 12 seg). También admite un decimal normal (34.2) por si se
+// prefiere escribirlo así. Se convierte a minutos decimales para guardar.
+function parseMinutos(v) {
+  if (v === '' || v == null) return null
+  const s = String(v).trim()
+  const conSegundos = s.match(/^(\d{1,3}):([0-5]?\d)$/)
+  if (conSegundos) {
+    const minutos = Number(conSegundos[1])
+    const segundos = Number(conSegundos[2])
+    return Math.round((minutos + segundos / 60) * 100) / 100
+  }
+  const n = parseFloat(s.replace(',', '.'))
+  return isNaN(n) ? null : n
+}
+
+// A la inversa: minutos decimales guardados (34.35) → "34:21" para
+// mostrarlos igual que se escriben.
+function formatMinutos(decimal) {
+  if (decimal == null || decimal === '') return ''
+  const minutos = Math.floor(decimal)
+  const segundos = Math.round((decimal - minutos) * 60)
+  return `${minutos}:${String(segundos).padStart(2, '0')}`
+}
+
 export default function StatsPartido() {
   const { id } = useParams()
   const [partido, setPartido] = useState(null)
@@ -117,7 +142,10 @@ export default function StatsPartido() {
       setFormStats(draft)
       setFormTitular(draftsTitular[jugador.id] ?? !!existing?.titular ?? false)
     } else if (existing) {
-      setFormStats(Object.fromEntries(CAMPOS.map(c => [c.key, existing[c.key] ?? ''])))
+      setFormStats(Object.fromEntries(CAMPOS.map(c => [
+        c.key,
+        c.key === 'min' ? formatMinutos(existing.min) : (existing[c.key] ?? '')
+      ])))
       setFormTitular(!!existing.titular)
     } else {
       setFormStats(emptyStats())
@@ -137,6 +165,10 @@ export default function StatsPartido() {
     const payload = { partido_id: Number(id), jugador_id: editandoId, titular: formTitular }
     CAMPOS.forEach(c => {
       const v = formStats[c.key]
+      if (c.key === 'min') {
+        payload.min = parseMinutos(v)
+        return
+      }
       payload[c.key] = v === '' || v === null ? null : (c.tipo === 'decimal') ? parseFloat(v) : parseInt(v)
     })
 
@@ -300,7 +332,7 @@ export default function StatsPartido() {
                           ? <span className="badge badge-local" style={{ marginLeft: 8, fontSize: 10 }}>Titular</span>
                           : <span className="badge badge-visit" style={{ marginLeft: 8, fontSize: 10 }}>Suplente</span>}
                       </td>
-                      <td>{s.min ?? '—'}</td>
+                      <td>{s.min != null ? formatMinutos(s.min) : '—'}</td>
                       <td style={{ fontWeight: 700, color: 'var(--blanco)' }}>{s.pts ?? '—'}</td>
                       <td>{s.t2_anotados ?? '—'}/{s.t2_intentos ?? '—'} <span style={{ fontSize:11, color:'var(--gris-500)' }}>({s.t2_pct != null ? s.t2_pct+'%' : '—'})</span></td>
                       <td>{s.t3_anotados ?? '—'}/{s.t3_intentos ?? '—'} <span style={{ fontSize:11, color:'var(--gris-500)' }}>({s.t3_pct != null ? s.t3_pct+'%' : '—'})</span></td>
@@ -441,14 +473,24 @@ export default function StatsPartido() {
                   {CAMPOS.map(c => (
                     <div key={c.key} className="form-group">
                       <label>{c.label}</label>
-                      <input
-                        type="number"
-                        step={c.tipo === 'decimal' ? '0.1' : '1'}
-                        value={formStats[c.key]}
-                        onChange={e => setVal(c.key, e.target.value)}
-                        placeholder="0"
-                        min={c.tipo === 'entero_signed' ? undefined : 0}
-                      />
+                      {c.key === 'min' ? (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formStats.min}
+                          onChange={e => setVal('min', e.target.value)}
+                          placeholder="mm:ss"
+                        />
+                      ) : (
+                        <input
+                          type="number"
+                          step={c.tipo === 'decimal' ? '0.1' : '1'}
+                          value={formStats[c.key]}
+                          onChange={e => setVal(c.key, e.target.value)}
+                          placeholder="0"
+                          min={c.tipo === 'entero_signed' ? undefined : 0}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
