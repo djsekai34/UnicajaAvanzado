@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import { calcAllAdvanced, calcTeamTotals } from '../lib/advanced'
+import { calcAllAdvanced, calcTeamTotals, sumarMinutos } from '../lib/advanced'
 
 export function usePublicData() {
   const [temporadas, setTemporadas]     = useState([])
@@ -115,7 +115,7 @@ export function usePublicData() {
   // una media) — se usa para calcular el % de minutos del equipo de cada
   // jugador sobre el total real de la temporada.
   const minTotalEquipoTemporada = useMemo(
-    () => statsFiltradas.reduce((a, s) => a + (s.min || 0), 0),
+    () => sumarMinutos(statsFiltradas.map(s => s.min)),
     [statsFiltradas]
   )
 

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import logo from "../../assets/Unicaja.png";
+import logoPorDefecto from "../../assets/Unicaja.png";
+import { useLogoConfig } from "../../hooks/useLogoConfig";
 
 export default function PublicLayout() {
   const [temporadaActiva, setTemporadaActiva] = useState(null);
+  const { logoUrl } = useLogoConfig();
 
   useEffect(() => {
     async function load() {
@@ -23,7 +25,7 @@ export default function PublicLayout() {
       <nav className="pub-nav">
         <Link to="/" className="pub-nav-logo">
           <img
-            src={logo}
+            src={logoUrl || logoPorDefecto}
             alt="Unicaja"
             onError={(e) => (e.target.style.display = "none")}
           />

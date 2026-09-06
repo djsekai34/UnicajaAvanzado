@@ -72,7 +72,33 @@ img, svg, table { max-width: 100%; }
 .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--gris-800); }
 .btn-logout { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--radius); background: transparent; border: 1px solid var(--gris-700); color: var(--gris-300); font-size: 14px; font-weight: 500; cursor: pointer; transition: background .15s; }
 .btn-logout:hover { background: var(--gris-800); }
-.main-content { flex: 1; margin-left: 240px; padding: 32px; max-width: 1200px; }
+.main-content { flex: 1; margin-left: 240px; padding: 32px; max-width: 1200px; transition: margin-left .2s ease; }
+.main-content.full { margin-left: 0; max-width: 100%; }
+.sidebar { transition: transform .2s ease; }
+.sidebar.oculto { transform: translateX(-100%); }
+.btn-toggle-panel {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gris-800);
+  border: 1px solid var(--gris-700);
+  border-radius: var(--radius);
+  color: var(--gris-300);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.btn-toggle-panel:hover { background: var(--gris-700); color: var(--blanco); }
+.btn-toggle-panel.flotante {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  width: 34px;
+  height: 34px;
+}
 
 /* ─── PUBLIC LAYOUT ─────────────────────────────────────────────────────── */
 .pub-layout { min-height: 100vh; background: var(--gris-900); }
@@ -407,6 +433,16 @@ select option { background: var(--gris-900); }
 }
 .table-wrap thead th.col-sticky { background: var(--gris-800); z-index: 3; }
 .table-wrap tbody tr:hover td.col-sticky { background: var(--gris-900); }
+.table-wrap th.col-sticky-right,
+.table-wrap td.col-sticky-right {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--negro);
+  box-shadow: -2px 0 6px rgba(0,0,0,.35);
+}
+.table-wrap thead th.col-sticky-right { background: var(--gris-800); z-index: 3; }
+.table-wrap tbody tr:hover td.col-sticky-right { background: var(--gris-900); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead { background: var(--gris-800); }
 th { text-align: left; padding: 11px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gris-500); border-bottom: 1px solid var(--gris-700); white-space: nowrap; cursor: pointer; user-select: none; }
@@ -699,6 +735,28 @@ input::placeholder { color: var(--gris-500); }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--gris-500); }
 .empty-state p { font-size: 15px; }
 
+/* ─── RESPONSIVE ADMIN (media pantalla / portátil en ventana partida) ──────
+   Entre el ancho de escritorio completo y el de móvil (donde todo se
+   apila), hay un tramo intermedio muy habitual al trabajar con el
+   navegador ocupando solo medio monitor (para tener las stats de
+   referencia al lado). Aquí se estrecha el sidebar y se compacta el
+   formulario de stats para que siga siendo cómodo sin llegar a apilarlo
+   todo como en móvil. */
+@media (max-width: 1100px) and (min-width: 769px) {
+  .sidebar { width: 188px; }
+  .sidebar-logo { padding: 18px 16px 16px; }
+  .sidebar-nav { padding: 12px 8px; }
+  .nav-link { padding: 8px 10px; font-size: 13px; }
+  .main-content { margin-left: 188px; padding: 20px; max-width: 100%; }
+
+  .modal { max-width: 96vw; }
+  .modal-body { padding: 18px; }
+  .form-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+  .stats-input-grid { grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 8px; }
+  .stats-input-grid input { padding: 7px 4px; font-size: 14px; }
+}
+
 /* ─── RESPONSIVE (MÓVIL/TABLET) ──────────────────────────────────────────── */
 @media (max-width: 768px) {
   .pub-nav {
@@ -767,6 +825,8 @@ input::placeholder { color: var(--gris-500); }
   .login-card { padding: 24px; }
 
   .admin-layout { flex-direction: column; }
+  .btn-toggle-panel { display: none; }
+  .sidebar.oculto { transform: none; }
   .sidebar { position: relative; width: 100%; height: auto; }
   .main-content { margin-left: 0; padding: 16px; max-width: 100%; }
 }

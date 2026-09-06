@@ -162,7 +162,7 @@ export default function Jugadores() {
           <table>
             <thead>
               <tr>
-                <th>Foto</th><th>#</th><th>Nombre</th><th>Posición</th><th>Nacionalidad</th><th></th>
+                <th>Foto</th><th>#</th><th className="col-sticky">Nombre</th><th>Posición</th><th>Nacionalidad</th><th className="col-sticky-right"></th>
               </tr>
             </thead>
             <tbody>
@@ -175,13 +175,13 @@ export default function Jugadores() {
                     }
                   </td>
                   <td style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--lima)', fontSize: 18 }}>{j.dorsal ?? '—'}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--blanco)' }}>
+                  <td className="col-sticky" style={{ fontWeight: 600, color: 'var(--blanco)' }}>
                     {j.nombre}
                     {j.es_cupo && <span className="badge badge-super" style={{ marginLeft: 8 }}>Cupo</span>}
                   </td>
                   <td><span className="pos-pill">{j.posicion}{j.posicion_secundaria ? ` / ${j.posicion_secundaria}` : ''}</span></td>
                   <td>{j.nacionalidad || '—'}</td>
-                  <td>
+                  <td className="col-sticky-right">
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button className="btn btn-ghost btn-sm" onClick={() => openEdit(j)}>Editar</button>
                       <button className="btn btn-danger btn-sm" onClick={() => handleDelete(j)}>Eliminar</button>
@@ -208,7 +208,7 @@ export default function Jugadores() {
             <table>
               <thead>
                 <tr>
-                  <th>Foto</th><th>#</th><th>Nombre</th><th>Posición</th><th>Nacionalidad</th><th></th>
+                  <th>Foto</th><th>#</th><th className="col-sticky">Nombre</th><th>Posición</th><th>Nacionalidad</th><th className="col-sticky-right"></th>
                 </tr>
               </thead>
               <tbody>
@@ -221,13 +221,13 @@ export default function Jugadores() {
                       }
                     </td>
                     <td style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--gris-500)', fontSize: 18 }}>{j.dorsal ?? '—'}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--gris-300)' }}>
+                    <td className="col-sticky" style={{ fontWeight: 600, color: 'var(--gris-300)' }}>
                       {j.nombre}
                       {j.es_cupo && <span className="badge badge-super" style={{ marginLeft: 8 }}>Cupo</span>}
                     </td>
                     <td><span className="pos-pill">{j.posicion}{j.posicion_secundaria ? ` / ${j.posicion_secundaria}` : ''}</span></td>
                     <td>{j.nacionalidad || '—'}</td>
-                    <td>
+                    <td className="col-sticky-right">
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(j)}>Editar</button>
                         <button className="btn btn-primary btn-sm" onClick={() => reactivar(j)}>Reactivar</button>

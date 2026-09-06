@@ -38,8 +38,7 @@ function estimatePoss(p) {
 
 // ─── HELPER: totales de equipo sumando jugadores del partido ─────────────────
 export function calcTeamTotals(jugadoresStats) {
-  return jugadoresStats.reduce((acc, p) => {
-    acc.min          += p.min          || 0
+  const acc = jugadoresStats.reduce((acc, p) => {
     acc.pts          += p.pts          || 0
     acc.t2_anotados  += p.t2_anotados  || 0
     acc.t2_intentos  += p.t2_intentos  || 0
@@ -58,12 +57,19 @@ export function calcTeamTotals(jugadoresStats) {
     acc.fp           += p.fp           || 0
     acc.fr           += p.fr           || 0
     acc.val          += p.val          || 0
+    acc.plus_minus   += p.plus_minus   || 0
     return acc
   }, {
-    min:0, pts:0, t2_anotados:0, t2_intentos:0,
+    pts:0, t2_anotados:0, t2_intentos:0,
     t3_anotados:0, t3_intentos:0, tl_anotados:0, tl_intentos:0,
-    ro:0, rd:0, rt:0, as_:0, per:0, rec:0, tap:0, tr:0, fp:0, fr:0, val:0
+    ro:0, rd:0, rt:0, as_:0, per:0, rec:0, tap:0, tr:0, fp:0, fr:0, val:0, plus_minus:0
   })
+  // Los minutos se suman en segundos exactos (no sumando los decimales
+  // guardados tal cual), para que no se note ni el redondeo de cada
+  // jugador ni el ruido de coma flotante al sumar muchos a la vez —
+  // funciona incluso con partidos que ya tenías guardados de antes.
+  acc.min = sumarMinutos(jugadoresStats.map(p => p.min))
+  return acc
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -711,7 +717,7 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
   const winPorRol = calcWinPctPorRol(todosLosPartidosStats, partidos)
   const aportacionEquipo = calcAportacionEquipo(p, team)
   const minTotalJugador = todosLosPartidosStats
-    ? todosLosPartidosStats.reduce((a, s) => a + (s.min || 0), 0)
+    ? sumarMinutos(todosLosPartidosStats.map(s => s.min))
     : null
   const minutosEquipoPct = calcMinutosEquipoPct(minTotalJugador, minTotalEquipoTemporada)
 
@@ -765,9 +771,43 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
 }
 
 // ─── HELPER privado ──────────────────────────────────────────────────────────
+// Minutos decimales (12.7) → segundos enteros (762). Recupera el segundo
+// exacto casi siempre, aunque el decimal guardado tenga algo de redondeo.
+function minutosASegundos(decimal) {
+  if (decimal == null) return 0
+  const minutos = Math.floor(decimal)
+  const segundos = Math.round((decimal - minutos) * 60)
+  return minutos * 60 + segundos
+}
+
+// Suma varios valores de minutos SIN arrastrar el redondeo de cada uno:
+// en vez de sumar los decimales tal cual (lo que puede perder fracciones
+// de segundo y notarse al sumar muchos jugadores/partidos), cada valor
+// se pasa a segundos enteros, se suma en segundos y se convierte de
+// vuelta a minutos decimales al final.
+export function sumarMinutos(valores) {
+  const segundosTotales = valores.reduce((acc, v) => acc + minutosASegundos(v), 0)
+  return segundosTotales / 60
+}
+
 function round(n, dec) {
   if (n == null || isNaN(n) || !isFinite(n)) return null
   return Math.round(n * 10 ** dec) / 10 ** dec
+}
+
+// Los minutos se guardan como decimales (12:42 → 12.7), pero se escriben
+// y se leen como en cualquier acta de baloncesto: "12:42". Esta función
+// pasa el decimal guardado de vuelta a mm:ss para mostrarlo igual en toda
+// la web pública (antes solo se hacía en el panel admin).
+export function formatMinutos(decimal) {
+  if (decimal == null || decimal === '' || isNaN(decimal)) return null
+  const minutos = Math.floor(decimal)
+  const segundos = Math.round((decimal - minutos) * 60)
+  // Si el redondeo de segundos llega a 60 (ej. 12.999999), se sube al
+  // minuto siguiente para no mostrar "12:60".
+  return segundos === 60
+    ? `${minutos + 1}:00`
+    : `${minutos}:${String(segundos).padStart(2, '0')}`
 }
 
 function estimateTeamPoss(team) {

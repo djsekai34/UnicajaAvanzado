@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
-import logo from '../assets/Unicaja.png'
+import logoPorDefecto from '../assets/Unicaja.png'
 import { useAuth } from '../context/AuthContext'
+import { useLogoConfig } from '../hooks/useLogoConfig'
 
 const IconGrid = () => (
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -32,20 +34,68 @@ const IconEscudo = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
   </svg>
 )
+const IconImagen = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <rect x="3" y="3" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="8.5" cy="8.5" r="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15l-5-5L5 21" />
+  </svg>
+)
 const IconLogout = () => (
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} width={16} height={16}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
   </svg>
 )
+const IconPanel = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} width={16} height={16}>
+    <rect x="3" y="4" width="18" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 4v16" />
+  </svg>
+)
 
 export default function AdminLayout() {
   const { signOut, user } = useAuth()
+  const { logoUrl } = useLogoConfig()
+  // Se recuerda si el panel estaba oculto la última vez, para no tener
+  // que volver a ocultarlo cada vez que entras — útil sobre todo cuando
+  // trabajas con el navegador a media pantalla.
+  const [panelOculto, setPanelOculto] = useState(() => localStorage.getItem('admin_panel_oculto') === '1')
+  const togglePanel = () => {
+    setPanelOculto(o => {
+      const nuevo = !o
+      localStorage.setItem('admin_panel_oculto', nuevo ? '1' : '0')
+      return nuevo
+    })
+  }
 
   return (
     <div className="admin-layout">
-      <aside className="sidebar">
+      {/* Cuando el panel está oculto no hay logo al lado del que colgarlo,
+          así que aquí sí flota arriba a la izquierda para poder recuperarlo. */}
+      {panelOculto && (
+        <button
+          className="btn-toggle-panel flotante"
+          onClick={togglePanel}
+          title="Mostrar panel"
+          aria-label="Mostrar panel"
+        >
+          <IconPanel />
+        </button>
+      )}
+
+      <aside className={`sidebar${panelOculto ? ' oculto' : ''}`}>
         <div className="sidebar-logo">
-          <img src={logo} alt="Unicaja" style={{ height: 40, marginBottom: 8 }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <img src={logoUrl || logoPorDefecto} alt="Unicaja" style={{ height: 40 }} />
+            <button
+              className="btn-toggle-panel"
+              onClick={togglePanel}
+              title="Ocultar panel"
+              aria-label="Ocultar panel"
+            >
+              <IconPanel />
+            </button>
+          </div>
           <h1>Unicaja <span style={{ color: 'var(--verde)' }}>Avanzado</span></h1>
           <p>Panel Admin</p>
         </div>
@@ -72,6 +122,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/escudos" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             <IconEscudo /> Escudos de equipos
           </NavLink>
+          <NavLink to="/admin/icono" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+            <IconImagen /> Icono de la pagina web
+          </NavLink>
         </nav>
 
         <div className="sidebar-footer">
@@ -84,7 +137,7 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className={`main-content${panelOculto ? ' full' : ''}`}>
         <Outlet />
       </main>
     </div>

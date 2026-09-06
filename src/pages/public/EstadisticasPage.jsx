@@ -8,6 +8,7 @@ import {
 import { usePublicData } from '../../hooks/usePublicData'
 import FiltrosBar from '../../components/public/FiltrosBar'
 import AniversarioBadge from '../../components/public/AniversarioBadge'
+import { formatMinutos } from '../../lib/advanced'
 import EquipoRecordCard from '../../components/public/EquipoRecordCard'
 
 const BASIC_COLS = [
@@ -322,7 +323,7 @@ export default function EstadisticasPage() {
         <div>
           <h2>Estadísticas</h2>
           <p>
-            {data.partidosFiltrados.length} partidos
+            {new Set(data.statsFiltradas.map(s => s.partido_id)).size} partidos
             {data.mes !== 'todos' && ` · ${['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][Number(data.mes)]}`}
             {data.compId !== 'todas' && ` · ${data.competiciones.find(c=>String(c.id)===data.compId)?.nombre}`}
           </p>
@@ -399,7 +400,7 @@ export default function EstadisticasPage() {
                       </td>
                       <td className="num">{r.partidos}</td>
                       <td className="num">{r.titularidades}</td>
-                      <td className="num">{r.min}</td>
+                      <td className="num">{formatMinutos(r.min) ?? '—'}</td>
                       <td className="num highlight">{r.pts}</td>
                       <td className="num">{r.rt}</td>
                       <td className="num">{r.as_}</td>

@@ -65,7 +65,11 @@ function parseMinutos(v) {
   if (conSegundos) {
     const minutos = Number(conSegundos[1])
     const segundos = Number(conSegundos[2])
-    return Math.round((minutos + segundos / 60) * 100) / 100
+    // OJO: redondear aquí a solo 2 decimales pierde precisión de segundos
+    // (2 decimales = redondear a la décima de segundo más cercana), y esa
+    // pérdida diminuta se nota al sumar los minutos de 10-12 jugadores en
+    // el total del equipo. Con 4 decimales no se pierde nada.
+    return Math.round((minutos + segundos / 60) * 10000) / 10000
   }
   const n = parseFloat(s.replace(',', '.'))
   return isNaN(n) ? null : n
@@ -307,7 +311,7 @@ export default function StatsPartido() {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Jugador</th>
+                  <th className="col-sticky">Jugador</th>
                   <th>MIN</th>
                   <th>PTS</th>
                   <th>T2</th>
@@ -317,7 +321,7 @@ export default function StatsPartido() {
                   <th>AS</th>
                   <th>+/-</th>
                   <th>VAL</th>
-                  <th></th>
+                  <th className="col-sticky-right"></th>
                 </tr>
               </thead>
               <tbody>
@@ -326,7 +330,7 @@ export default function StatsPartido() {
                   return (
                     <tr key={j.id}>
                       <td style={{ color: 'var(--lima)', fontWeight: 700 }}>{j.dorsal}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--blanco)' }}>
+                      <td className="col-sticky" style={{ fontWeight: 600, color: 'var(--blanco)' }}>
                         {j.nombre}
                         {s.titular
                           ? <span className="badge badge-local" style={{ marginLeft: 8, fontSize: 10 }}>Titular</span>
@@ -343,7 +347,7 @@ export default function StatsPartido() {
                         {s.plus_minus != null ? (s.plus_minus > 0 ? `+${s.plus_minus}` : s.plus_minus) : '—'}
                       </td>
                       <td style={{ color: 'var(--lima)', fontWeight: 700 }}>{s.val ?? '—'}</td>
-                      <td style={{ display: 'flex', gap: 6 }}>
+                      <td className="col-sticky-right" style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(j)}>Editar</button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(j.id)}>×</button>
                       </td>

@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
-import logo from '../../assets/Unicaja.png'
+import logoPorDefecto from '../../assets/Unicaja.png'
+import { useLogoConfig } from '../../hooks/useLogoConfig'
 
 export default function LoginPage() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
+  const { logoUrl } = useLogoConfig()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,7 +30,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <img src={logo} alt="Unicaja" style={{ height: 72, marginBottom: 12 }} />
+          <img src={logoUrl || logoPorDefecto} alt="Unicaja" style={{ height: 72, marginBottom: 12 }} />
           <h1>Unicaja <span style={{ color: 'var(--verde)' }}>Avanzado</span></h1>
           <p>Panel de administración</p>
         </div>

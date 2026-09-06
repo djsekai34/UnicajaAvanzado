@@ -161,12 +161,12 @@ export default function Partidos() {
             <thead>
               <tr>
                 <th>Fecha</th>
-                <th>Rival</th>
+                <th className="col-sticky">Rival</th>
                 <th>Competición</th>
                 <th>Condición</th>
                 <th>Resultado</th>
                 <th>Stats</th>
-                <th></th>
+                <th className="col-sticky-right"></th>
               </tr>
             </thead>
             <tbody>
@@ -175,7 +175,7 @@ export default function Partidos() {
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {new Date(p.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
-                  <td style={{ fontWeight: 600, color: 'var(--blanco)' }}>{p.rival}</td>
+                  <td className="col-sticky" style={{ fontWeight: 600, color: 'var(--blanco)' }}>{p.rival}</td>
                   <td><span className={badgeClass(p.competiciones?.nombre)}>{p.competiciones?.nombre}</span></td>
                   <td><span className={`badge ${p.es_local === null ? 'badge-neutral' : p.es_local ? 'badge-local' : 'badge-visit'}`}>{p.es_local === null ? 'Sede neutra' : p.es_local ? 'Local' : 'Visitante'}</span></td>
                   <td>{resultado(p)}</td>
@@ -184,7 +184,7 @@ export default function Partidos() {
                       Meter stats
                     </Link>
                   </td>
-                  <td style={{ display: 'flex', gap: 6 }}>
+                  <td className="col-sticky-right" style={{ display: 'flex', gap: 6 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>Editar</button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}>Borrar</button>
                   </td>

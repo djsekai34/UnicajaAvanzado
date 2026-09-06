@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 function calcularRecord(partidos) {
-  const jugados = (partidos || []).filter(p => p.puntos_unicaja != null && p.puntos_rival != null)
+  // Los amistosos no cuentan para el récord del entrenador.
+  const oficiales = (partidos || []).filter(p => p.competiciones?.nombre !== 'Amistosos')
+  const jugados = oficiales.filter(p => p.puntos_unicaja != null && p.puntos_rival != null)
   const victorias = jugados.filter(p => p.puntos_unicaja > p.puntos_rival).length
   const derrotas = jugados.length - victorias
   const pct = jugados.length > 0 ? Math.round((victorias / jugados.length) * 1000) / 10 : null
@@ -24,7 +26,7 @@ export default function EquipoRecordCard({ temporada }) {
     async function load() {
       const { data: partidosActual } = await supabase
         .from('partidos')
-        .select('puntos_unicaja, puntos_rival')
+        .select('puntos_unicaja, puntos_rival, competiciones(nombre)')
         .eq('temporada_id', temporada.id)
       if (!cancel) setRecordActual(calcularRecord(partidosActual))
 
@@ -38,7 +40,7 @@ export default function EquipoRecordCard({ temporada }) {
         if (ids.length > 1) {
           const { data: partidosTotal } = await supabase
             .from('partidos')
-            .select('puntos_unicaja, puntos_rival')
+            .select('puntos_unicaja, puntos_rival, competiciones(nombre)')
             .in('temporada_id', ids)
           if (!cancel) setRecordTotal(calcularRecord(partidosTotal))
         } else if (!cancel) {
@@ -68,7 +70,7 @@ export default function EquipoRecordCard({ temporada }) {
         </div>
       </div>
 
-      {recordActual && recordActual.total > 0 && (
+      {recordActual && (
         <div className="equipo-record-linea">
           <span className="equipo-record-tag">{temporada.nombre}</span>
           <span className="equipo-record-vd">
@@ -76,7 +78,7 @@ export default function EquipoRecordCard({ temporada }) {
             <span className="sep">-</span>
             <span className="neg">{recordActual.derrotas}D</span>
           </span>
-          <span className="equipo-record-pct">{recordActual.pct}%</span>
+          <span className="equipo-record-pct">{recordActual.pct ?? 0}%</span>
         </div>
       )}
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { competicionInfo, formatJornada } from '../../lib/competiciones'
-import { calcTeamTotals } from '../../lib/advanced'
+import { calcTeamTotals, formatMinutos } from '../../lib/advanced'
 import logoUnicaja from '../../assets/Unicaja.png'
 
 function slugify(nombre) {
@@ -29,7 +29,7 @@ const STATS_PODIO = [
 
 // Columnas de la tabla de estadísticas básicas del partido.
 const COLS = [
-  { key: 'min',  label: 'MIN',  fmt: v => v != null ? v : '—' },
+  { key: 'min',  label: 'MIN',  fmt: v => v != null ? formatMinutos(v) : '—' },
   { key: 'pts',  label: 'PTS' },
   { key: 't2_anotados', label: 'T2',  compuesta: (s) => `${s.t2_anotados ?? 0}/${s.t2_intentos ?? 0}` },
   { key: 't3_anotados', label: 'T3',  compuesta: (s) => `${s.t3_anotados ?? 0}/${s.t3_intentos ?? 0}` },
@@ -124,7 +124,19 @@ export default function PartidoDetallePage() {
   const alturaPodio = { 0: 128, 1: 92, 2: 68 } // por posición real (1º,2º,3º)
 
   const statsOrdenadas = [...stats].sort((a, b) => (b.val || 0) - (a.val || 0))
-  const totales = calcTeamTotals(stats)
+  const totalesBrutos = calcTeamTotals(stats)
+  // El total "oficial" de minutos de un partido siempre es un múltiplo de
+  // 25 (200 en tiempo reglamentario, 225 con una prórroga, 250 con dos...)
+  // porque son 5 jugadores en pista todo el rato. Si la suma real se
+  // queda a menos de un minuto de esa cifra limpia, se redondea a ella
+  // (pequeños redondeos de segundos al anotar el acta); si la diferencia
+  // es mayor, se deja tal cual para no tapar un fallo real de algún dato.
+  const minCercano25 = Math.round(totalesBrutos.min / 25) * 25
+  const diferenciaSeg = Math.abs(totalesBrutos.min - minCercano25) * 60
+  const totales = {
+    ...totalesBrutos,
+    min: diferenciaSeg <= 60 ? minCercano25 : totalesBrutos.min,
+  }
 
   return (
     <div className="page">
@@ -278,11 +290,9 @@ export default function PartidoDetallePage() {
                     <td className="col-sticky" style={{ fontWeight: 700, color: 'var(--gris-300)' }}>TOTAL EQUIPO</td>
                     {COLS.map(c => (
                       <td key={c.key} className="num" style={{ fontWeight: 700, color: 'var(--blanco)' }}>
-                        {c.key === 'plus_minus'
-                          ? '—'
-                          : c.compuesta
-                            ? c.compuesta(totales)
-                            : (c.fmt ? c.fmt(totales[c.key]) : (totales[c.key] ?? '—'))}
+                        {c.compuesta
+                          ? c.compuesta(totales)
+                          : (c.fmt ? c.fmt(totales[c.key]) : (totales[c.key] ?? '—'))}
                       </td>
                     ))}
                   </tr>

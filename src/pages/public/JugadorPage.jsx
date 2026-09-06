@@ -5,7 +5,7 @@ import {
   Tooltip, ResponsiveContainer, ReferenceLine, Legend
 } from 'recharts'
 import { supabase } from '../../lib/supabase'
-import { calcAllAdvanced, calcTeamTotals } from '../../lib/advanced'
+import { calcAllAdvanced, calcTeamTotals, formatMinutos, sumarMinutos } from '../../lib/advanced'
 import AniversarioBadge from '../../components/public/AniversarioBadge'
 
 const COLORS = ['#4E9E47','#9DC41A','#60A5FA','#F59E0B']
@@ -125,8 +125,15 @@ export default function JugadorPage() {
   })
 
   const n = statsFiltradas.length
-  const avg = key => n > 0 ? statsFiltradas.reduce((a,s) => a+(s[key]||0), 0) / n : null
-  const sum = key => statsFiltradas.reduce((a,s) => a+(s[key]||0), 0)
+  const avg = key => {
+    if (n === 0) return null
+    return key === 'min'
+      ? sumarMinutos(statsFiltradas.map(s => s.min)) / n
+      : statsFiltradas.reduce((a,s) => a+(s[key]||0), 0) / n
+  }
+  const sum = key => key === 'min'
+    ? sumarMinutos(statsFiltradas.map(s => s.min))
+    : statsFiltradas.reduce((a,s) => a+(s[key]||0), 0)
 
   const jugPartidos = [...new Set(statsFiltradas.map(s => s.partido_id))]
   let teamAvg = {}
@@ -155,9 +162,9 @@ export default function JugadorPage() {
   // Total de minutos del equipo en todos los partidos filtrados (suma real,
   // no media), para el % de minutos del equipo de este jugador.
   const partidoIdsFiltrados = new Set(statsFiltradas.map(s => s.partido_id))
-  const minTotalEquipoTemporada = allStats
-    .filter(s => partidoIdsFiltrados.has(s.partido_id))
-    .reduce((a, s) => a + (s.min || 0), 0)
+  const minTotalEquipoTemporada = sumarMinutos(
+    allStats.filter(s => partidoIdsFiltrados.has(s.partido_id)).map(s => s.min)
+  )
   const advanced = n > 0 ? calcAllAdvanced(avgStats, teamAvg, ultimoPartido?.puntos_rival, statsOrdenadas, partidos, minTotalEquipoTemporada) : {}
 
   const { dd, td } = advanced.dobles_dobles != null
@@ -302,7 +309,7 @@ export default function JugadorPage() {
                   { label:'Recuperaciones', value: rnd(avg('rec')) },
                   { label:'Tapones', value: rnd(avg('tap')) },
                   { label:'Pérdidas', value: rnd(avg('per')) },
-                  { label:'Minutos', value: rnd(avg('min')) },
+                  { label:'Minutos', value: formatMinutos(avg('min')) },
                   { label:'+/-', value: rnd(avg('plus_minus')), lima: true },
                   { label:'Valoración', value: rnd(avg('val')), lima: true },
                   { label:'Mates', value: sum('mat') },
@@ -375,7 +382,7 @@ export default function JugadorPage() {
     : '—'
   }
 </td>
-                        <td className="num">{rnd(s.min)}</td>
+                        <td className="num">{s.min != null ? formatMinutos(s.min) : '—'}</td>
                         <td className="num highlight">{s.pts}</td>
                         <td className="num">{s.t2_anotados}/{s.t2_intentos}</td>
                         <td className="num">{s.t3_anotados}/{s.t3_intentos}</td>
@@ -398,7 +405,7 @@ export default function JugadorPage() {
                   <tr style={{ background:'var(--gris-800)', fontWeight:700 }}>
                     <td colSpan={4} style={{ color:'var(--gris-400)', fontSize:12 }}>MEDIA</td>
                     <td></td>
-                    <td className="num">{rnd(avg('min'))}</td>
+                    <td className="num">{formatMinutos(avg('min')) ?? '—'}</td>
                     <td className="num highlight">{rnd(avg('pts'))}</td>
                     <td className="num">{rnd(avg('t2_anotados'),1)}/{rnd(avg('t2_intentos'),1)}</td>
                     <td className="num">{rnd(avg('t3_anotados'),1)}/{rnd(avg('t3_intentos'),1)}</td>
