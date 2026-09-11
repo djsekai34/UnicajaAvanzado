@@ -42,6 +42,12 @@ function slugify(nombre) {
 
 function rnd(v, d = 1) { return v != null ? Math.round(v * 10 ** d) / 10 ** d : null }
 
+// % de tiro para el ranking: exige un mínimo de intentos de media para que
+// un jugador con 1 solo tiro anotado (100%) no salga primero.
+function pctTiro(m, i, minIntentos = 1) {
+  return i != null && i >= minIntentos ? rnd((m / i) * 100) : null
+}
+
 // Categorías del ranking: qué estadística, de dónde sacarla (media por
 // jugador ya calculada por el hook) y cómo formatear el valor.
 const RANKING_CATS = [
@@ -57,6 +63,10 @@ const RANKING_CATS = [
   { key: 'usg_pct',          label: 'USG%',       get: d => d.advanced?.usg_pct,          fmt: v => v + '%' },
   { key: 'net_rating',       label: 'NRTG',       get: d => d.advanced?.net_rating,       fmt: v => (v > 0 ? '+' : '') + v },
   { key: 'win_pct_titular',  label: 'V% Titular', get: d => d.advanced?.win_pct_titular,  fmt: v => v + '%' },
+  { key: 'tc_pct', label: '%TC', get: d => pctTiro(d.stats.t2_anotados + d.stats.t3_anotados, d.stats.t2_intentos + d.stats.t3_intentos), fmt: v => v + '%' },
+  { key: 't2_pct', label: '%T2', get: d => pctTiro(d.stats.t2_anotados, d.stats.t2_intentos), fmt: v => v + '%' },
+  { key: 't3_pct', label: '%T3', get: d => pctTiro(d.stats.t3_anotados, d.stats.t3_intentos), fmt: v => v + '%' },
+  { key: 'tl_pct', label: '%TL', get: d => pctTiro(d.stats.tl_anotados, d.stats.tl_intentos), fmt: v => v + '%' },
 ]
 
 const MEDALLAS = ['🥇', '🥈', '🥉']
@@ -81,6 +91,8 @@ export default function EquipoPage() {
   )
   const media = key => numPartidosConStats > 0 ? totales[key] / numPartidosConStats : 0
 
+  const tcIntentos = totales.t2_intentos + totales.t3_intentos
+  const tcpct = tcIntentos > 0 ? rnd(((totales.t2_anotados + totales.t3_anotados) / tcIntentos) * 100) : null
   const t2pct = totales.t2_intentos > 0 ? rnd((totales.t2_anotados / totales.t2_intentos) * 100) : null
   const t3pct = totales.t3_intentos > 0 ? rnd((totales.t3_anotados / totales.t3_intentos) * 100) : null
   const tlpct = totales.tl_intentos > 0 ? rnd((totales.tl_anotados / totales.tl_intentos) * 100) : null
@@ -165,6 +177,11 @@ export default function EquipoPage() {
 
           <div className="adv-grid">
             <div className="adv-card">
+              <div className="adv-label">TC</div>
+              <div className="adv-name">{rnd(totales.t2_anotados + totales.t3_anotados)}/{rnd(totales.t2_intentos + totales.t3_intentos)} de media</div>
+              <div className="adv-value pct">{tcpct != null ? tcpct + '%' : '—'}</div>
+            </div>
+            <div className="adv-card">
               <div className="adv-label">T2</div>
               <div className="adv-name">{rnd(totales.t2_anotados)}/{rnd(totales.t2_intentos)} de media</div>
               <div className="adv-value pct">{t2pct != null ? t2pct + '%' : '—'}</div>
@@ -189,7 +206,7 @@ export default function EquipoPage() {
               </div>
 
               <div className="titulos-grid">
-                {data.competiciones.map(c => {
+                {data.competiciones.filter(c => TROFEO_IMG[c.nombre]).map(c => {
                   const conseguido = !!titulosPorCompeticion[c.id]
                   const img = TROFEO_IMG[c.nombre]
                   return (

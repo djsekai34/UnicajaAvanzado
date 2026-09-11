@@ -113,7 +113,7 @@ export default function CalendarioPage() {
   }, [partidos])
 
   const proximoPartido = useMemo(
-    () => partidos.find(p => p.fecha >= hoyISO) || null,
+    () => partidos.find(p => p.fecha >= hoyISO && !(p.puntos_unicaja != null && p.puntos_rival != null)) || null,
     [partidos, hoyISO]
   )
 

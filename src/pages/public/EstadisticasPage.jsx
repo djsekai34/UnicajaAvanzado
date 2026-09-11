@@ -24,6 +24,7 @@ const BASIC_COLS = [
   { key: 'fp',       label: 'FP',  desc: 'Faltas personales' },
   { key: 'plus_minus', label: '+/-', desc: 'Diferencial' },
   { key: 'val',      label: 'VAL', desc: 'Valoración ACB' },
+  { key: 'tc',       label: 'TC',  desc: 'Tiro de campo (T2+T3)' },
   { key: 't2',       label: 'T2',  desc: 'Tiros de 2' },
   { key: 't3',       label: 'T3',  desc: 'Tiros de 3' },
   { key: 'tl',       label: 'TL',  desc: 'Tiros libres' },
@@ -52,6 +53,7 @@ const ADV_COLS = [
   { key: 'epm',      label: 'EPM',     desc: 'Estimated Plus/Minus',   fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'raptor',   label: 'RAPTOR',  desc: 'RAPTOR (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'lebron',   label: 'LEBRON',  desc: 'LEBRON (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
+  { key: 'dpm',      label: 'DPM',     desc: 'DPM (aprox. — darko.app)', fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'tendencia_val', label: 'TEND', desc: 'Tendencia VAL (últ.5)', fmt: v => v != null ? v : '—', type: 'rating' },
   { key: 'win_pct_titular',  label: 'V% TIT', desc: '% de victorias en los partidos que fue titular',  fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'win_pct_suplente', label: 'V% SUP', desc: '% de victorias en los partidos que fue suplente', fmt: v => v != null ? v+'%' : '—', type: 'pct' },
@@ -130,9 +132,14 @@ export default function EstadisticasPage() {
       .filter(Boolean)
       .map(d => ({
         ...d,
+        tc: `${rnd(d.stats.t2_anotados + d.stats.t3_anotados,1)}/${rnd(d.stats.t2_intentos + d.stats.t3_intentos,1)}`,
+        tc_sort: rnd(d.stats.t2_anotados + d.stats.t3_anotados,1),
         t2: `${rnd(d.stats.t2_anotados,1)}/${rnd(d.stats.t2_intentos,1)}`,
+        t2_sort: rnd(d.stats.t2_anotados,1),
         t3: `${rnd(d.stats.t3_anotados,1)}/${rnd(d.stats.t3_intentos,1)}`,
+        t3_sort: rnd(d.stats.t3_anotados,1),
         tl: `${rnd(d.stats.tl_anotados,1)}/${rnd(d.stats.tl_intentos,1)}`,
+        tl_sort: rnd(d.stats.tl_anotados,1),
         min:        rnd(d.stats.min),
         pts:        rnd(d.stats.pts),
         rt:         rnd(d.stats.rt),
@@ -145,8 +152,13 @@ export default function EstadisticasPage() {
         val:        rnd(d.stats.val),
       }))
       .sort((a, b) => {
-        const va = tab === 'basicas' ? (a[sortCol] ?? -999) : (a.advanced?.[sortCol] ?? -999)
-        const vb = tab === 'basicas' ? (b[sortCol] ?? -999) : (b.advanced?.[sortCol] ?? -999)
+        // T2/T3/TL/TC se muestran como "anotados/intentos" (texto), así que
+        // para ordenarlas usamos el campo numérico "_sort" (anotados) en
+        // vez del texto formateado.
+        const SORT_KEY_MAP = { t2: 't2_sort', t3: 't3_sort', tl: 'tl_sort', tc: 'tc_sort' }
+        const key = SORT_KEY_MAP[sortCol] || sortCol
+        const va = tab === 'basicas' ? (a[key] ?? -999) : (a.advanced?.[sortCol] ?? -999)
+        const vb = tab === 'basicas' ? (b[key] ?? -999) : (b.advanced?.[sortCol] ?? -999)
         return sortDir * (vb - va)
       })
   }, [promediosPorJugador, jugadoresSeleccionados, sortCol, sortDir, tab])
@@ -412,6 +424,7 @@ export default function EstadisticasPage() {
                         {r.plus_minus!=null?(r.plus_minus>0?'+':'')+r.plus_minus:'—'}
                       </td>
                       <td className="num lima">{r.val}</td>
+                      <td className="num">{r.tc}</td>
                       <td className="num">{r.t2}</td>
                       <td className="num">{r.t3}</td>
                       <td className="num">{r.tl}</td>
@@ -637,7 +650,7 @@ export default function EstadisticasPage() {
           {tab === 'ayuda' && (
             <>
               <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--gris-800)', borderLeft: '3px solid var(--gris-600)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--gris-400)', lineHeight: 1.6 }}>
-                <span style={{ color: 'var(--blanco)', fontWeight: 700 }}>Glosario de métricas</span> — descripción detallada de cada estadística avanzada: qué mide, cómo se calcula y cómo interpretarla. Las métricas de impacto (EPM, RAPTOR, LEBRON) son <span style={{ color: 'var(--gris-300)' }}>aproximaciones basadas en box score</span>, ya que las versiones reales requieren datos de tracking de cámara que no están disponibles públicamente en la ACB.
+                <span style={{ color: 'var(--blanco)', fontWeight: 700 }}>Glosario de métricas</span> — descripción detallada de cada estadística avanzada: qué mide, cómo se calcula y cómo interpretarla. Las métricas de impacto (EPM, RAPTOR, LEBRON, DPM) son <span style={{ color: 'var(--gris-300)' }}>aproximaciones basadas en box score</span>, ya que las versiones reales requieren datos de tracking de cámara (o, en el caso del DPM, +/- de toda la liga) que no están disponibles públicamente en la ACB.
               </div>
             <div style={{ display: 'grid', gap: 16 }}>
               {[
@@ -680,6 +693,7 @@ export default function EstadisticasPage() {
                   { label: 'EPM — Estimated Plus/Minus', formula: 'Coeficientes públicos dunksandthrees.com aplicados a stats por posesión', desc: 'Aproximación al RPM/RAPM usando solo box score. Divide en OEPM (ofensivo) y DEPM (defensivo). Las métricas reales requieren datos de tracking que no tenemos.' },
                   { label: 'RAPTOR (aprox.)', formula: 'Combinación de BPM con ajuste de eficiencia y rol (FiveThirtyEight adaptado)', desc: 'Aproximación a la métrica de FiveThirtyEight. El RAPTOR real usa datos de cámara de seguimiento; esta versión es una estimación box-score. Divide en ORAPTOR y DRAPTOR.' },
                   { label: 'LEBRON (aprox.)', formula: '0.55×BPM + 0.35×EPM + 0.10×PER_ajustado', desc: 'Aproximación a la métrica de BBall-Index. El LEBRON real combina RAPM con arquetipos de rol; esta versión pondera las tres principales métricas de impacto disponibles.' },
+                  { label: 'DPM (aprox.) — darko.app', formula: '0.6×EPM + 0.4×(+/- real por 36 min, ponderando más los partidos recientes)', desc: 'Aproximación al Daily Plus-Minus de la web darko.app. El DPM real es un modelo bayesiano (filtro de Kalman) que combina box score con +/- de toda la liga ajustado por rivales y compañeros, actualizado día a día dando más peso a lo reciente. Al no disponer de los datos completos de la ACB, así que esta versión combina el impacto de caja (EPM) con el +/- real de cada partido, dando algo más de peso a los partidos más recientes.' },
                 ]},
                 { grupo: 'Métricas de seguimiento', items: [
                   { label: 'TEND — Tendencia VAL', formula: 'Media de valoración ACB de los últimos 5 partidos', desc: 'Indica si el jugador está en buena o mala racha reciente. Si la tendencia supera la media de temporada, el jugador está en forma.' },

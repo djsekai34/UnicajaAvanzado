@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -7,6 +7,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { calcAllAdvanced, calcTeamTotals, formatMinutos, sumarMinutos } from '../../lib/advanced'
 import AniversarioBadge from '../../components/public/AniversarioBadge'
+import CapturaBoton from '../../components/public/CapturaBoton'
 
 const COLORS = ['#4E9E47','#9DC41A','#60A5FA','#F59E0B']
 
@@ -53,6 +54,7 @@ const ADV_METRICS = [
   { key:'epm',       label:'EPM',    desc:'Estimated Plus/Minus',    fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'raptor',    label:'RAPTOR', desc:'RAPTOR (aprox.)',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'lebron',    label:'LEBRON', desc:'LEBRON (aprox.)',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
+  { key:'dpm',       label:'DPM',    desc:'DPM (aprox. — darko.app)', fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'tendencia_val', label:'TEND', desc:'Tendencia VAL (últ.5)', fmt: v => v!=null?v:'—',                  type:'rating' },
   { key:'win_pct_titular',  label:'V% TITULAR',  desc:'% de victorias en los partidos que fue titular',  fmt: v => v!=null?v+'%':'—', type:'pct' },
   { key:'win_pct_suplente', label:'V% SUPLENTE', desc:'% de victorias en los partidos que fue suplente', fmt: v => v!=null?v+'%':'—', type:'pct' },
@@ -68,6 +70,27 @@ export default function JugadorPage() {
   const [allStats, setAllStats] = useState([])
   const [loading, setLoading]   = useState(true)
   const [tab, setTab]           = useState('resumen')
+  // Solo se puede descargar imagen en Resumen y Avanzadas (Partido a
+  // partido y Gráficas no tienen botón de captura). Un único ref cubre
+  // la cabecera del jugador + lo que haya montado en ese momento.
+  const capturaRef = useRef(null)
+  // Para que la imagen descargada no lleve los botones de filtro ni las
+  // pestañas (solo el contenido), se ocultan un instante justo antes de
+  // capturar y se restauran justo después — mismo patrón que en el
+  // Comparador.
+  const capturaBotonRef = useRef(null)
+  const [ocultandoControles, setOcultandoControles] = useState(false)
+  const [capturaTrigger, setCapturaTrigger] = useState(0)
+
+  useEffect(() => {
+    if (capturaTrigger > 0) capturaBotonRef.current?.capturar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capturaTrigger])
+
+  const iniciarCaptura = () => {
+    setOcultandoControles(true)
+    setCapturaTrigger(t => t + 1)
+  }
   const [filtroComp, setFiltroComp] = useState('todas')
   const [competiciones, setCompeticiones] = useState([])
 
@@ -201,9 +224,26 @@ export default function JugadorPage() {
         <Link to="/" style={{ color:'var(--gris-500)', fontSize:13, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
           ← Volver a estadísticas
         </Link>
-        <AniversarioBadge temporadaNombre={jugador.temporadas?.nombre} />
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          {(tab === 'resumen' || tab === 'avanzadas') && n > 0 && (
+            <>
+              <button className="btn btn-ghost btn-sm" onClick={iniciarCaptura} disabled={ocultandoControles}>
+                {ocultandoControles ? <><span className="spinner" /> Generando...</> : '📸 Descargar imagen'}
+              </button>
+              <CapturaBoton
+                ref={capturaBotonRef}
+                targetRef={capturaRef}
+                mostrarBoton={false}
+                onDone={() => setOcultandoControles(false)}
+                filename={`${slugify(jugador.nombre)}-${tab}-${filtroComp === 'todas' ? 'todas' : competiciones.find(c => String(c.id) === filtroComp)?.nombre || filtroComp}`}
+              />
+            </>
+          )}
+          <AniversarioBadge temporadaNombre={jugador.temporadas?.nombre} />
+        </div>
       </div>
 
+      <div ref={capturaRef}>
       {/* Header jugador */}
       <div className="card" style={{ marginBottom:28 }}>
         <div style={{ display:'flex', flexWrap:'wrap', gap:24, alignItems:'center', justifyContent:'space-between' }}>
@@ -275,18 +315,26 @@ export default function JugadorPage() {
       </div>
 
       {/* Filtro competición */}
-      <div style={{ display:'flex', gap:8, marginBottom:24, flexWrap:'wrap' }}>
-        <button className={`btn btn-sm ${filtroComp==='todas'?'btn-primary':'btn-ghost'}`} onClick={() => setFiltroComp('todas')}>Todas</button>
-        {competiciones.map(c => (
-          <button key={c.id} className={`btn btn-sm ${filtroComp===String(c.id)?'btn-primary':'btn-ghost'}`}
-            onClick={() => setFiltroComp(String(c.id))}>
-            {c.nombre}
-          </button>
-        ))}
-      </div>
+      {ocultandoControles ? (
+        <div style={{ marginBottom: 24 }}>
+          <span className="badge badge-local" style={{ fontSize: 12 }}>
+            {filtroComp === 'todas' ? 'Todas las competiciones' : competiciones.find(c => String(c.id) === filtroComp)?.nombre}
+          </span>
+        </div>
+      ) : (
+        <div style={{ display:'flex', gap:8, marginBottom:24, flexWrap:'wrap' }}>
+          <button className={`btn btn-sm ${filtroComp==='todas'?'btn-primary':'btn-ghost'}`} onClick={() => setFiltroComp('todas')}>Todas</button>
+          {competiciones.map(c => (
+            <button key={c.id} className={`btn btn-sm ${filtroComp===String(c.id)?'btn-primary':'btn-ghost'}`}
+              onClick={() => setFiltroComp(String(c.id))}>
+              {c.nombre}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tabs */}
-      <div className="tabs">
+      <div className="tabs" style={{ display: ocultandoControles ? 'none' : 'flex' }}>
         {[{id:'resumen',label:'Resumen'},{id:'partidos',label:'Partido a partido'},{id:'avanzadas',label:'Avanzadas'},{id:'graficas',label:'Gráficas'}].map(t => (
           <button key={t.id} className={`tab-btn${tab===t.id?' active':''}`} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
@@ -298,7 +346,7 @@ export default function JugadorPage() {
         <>
           {/* ── RESUMEN ── */}
           {tab === 'resumen' && (
-            <>
+            <div>
               <div className="stat-grid">
                 {[
                   { label:'Partidos jugados', value: n, sub: 'esta temporada' },
@@ -328,6 +376,7 @@ export default function JugadorPage() {
                 <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, marginBottom:16 }}>Tiros</h3>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px,1fr))', gap:16 }}>
                   {[
+                    { label:'Tiro de campo', m: avg('t2_anotados')+avg('t3_anotados'), i: avg('t2_intentos')+avg('t3_intentos') },
                     { label:'Tiros de 2', m: avg('t2_anotados'), i: avg('t2_intentos') },
                     { label:'Tiros de 3', m: avg('t3_anotados'), i: avg('t3_intentos') },
                     { label:'Tiros libres', m: avg('tl_anotados'), i: avg('tl_intentos') },
@@ -342,7 +391,7 @@ export default function JugadorPage() {
                   ))}
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* ── PARTIDO A PARTIDO ── */}
@@ -352,7 +401,7 @@ export default function JugadorPage() {
                 <thead>
                   <tr>
                     <th>Fecha</th><th>Rival</th><th>Rol</th><th>Comp.</th><th>Resultado</th><th>MIN</th>
-                    <th>PTS</th><th>T2</th><th>T3</th><th>TL</th>
+                    <th>PTS</th><th>TC</th><th>T2</th><th>T3</th><th>TL</th>
                     <th>RO</th><th>RD</th><th>RT</th><th>AS</th>
                     <th>PÉR</th><th>REC</th><th>TAP</th><th>MAT</th>
                     <th>FP</th><th>FR</th><th>+/-</th><th>VAL</th>
@@ -384,6 +433,7 @@ export default function JugadorPage() {
 </td>
                         <td className="num">{s.min != null ? formatMinutos(s.min) : '—'}</td>
                         <td className="num highlight">{s.pts}</td>
+                        <td className="num">{(s.t2_anotados||0)+(s.t3_anotados||0)}/{(s.t2_intentos||0)+(s.t3_intentos||0)}</td>
                         <td className="num">{s.t2_anotados}/{s.t2_intentos}</td>
                         <td className="num">{s.t3_anotados}/{s.t3_intentos}</td>
                         <td className="num">{s.tl_anotados}/{s.tl_intentos}</td>
@@ -407,6 +457,7 @@ export default function JugadorPage() {
                     <td></td>
                     <td className="num">{formatMinutos(avg('min')) ?? '—'}</td>
                     <td className="num highlight">{rnd(avg('pts'))}</td>
+                    <td className="num">{rnd(avg('t2_anotados')+avg('t3_anotados'),1)}/{rnd(avg('t2_intentos')+avg('t3_intentos'),1)}</td>
                     <td className="num">{rnd(avg('t2_anotados'),1)}/{rnd(avg('t2_intentos'),1)}</td>
                     <td className="num">{rnd(avg('t3_anotados'),1)}/{rnd(avg('t3_intentos'),1)}</td>
                     <td className="num">{rnd(avg('tl_anotados'),1)}/{rnd(avg('tl_intentos'),1)}</td>
@@ -532,6 +583,7 @@ export default function JugadorPage() {
           )}
         </>
       )}
+      </div>
     </div>
   )
 }

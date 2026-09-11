@@ -55,7 +55,7 @@ const CapturaBoton = forwardRef(function CapturaBoton(
       }
 
       const canvas = await html2canvas(el, {
-        backgroundColor: '#0D0D0D',
+        backgroundColor: '#111827', // fondo real de la web (var(--gris-900)), no negro puro
         scale: 2, // más resolución para que se vea nítido al compartir
         useCORS: true,
       })
@@ -74,7 +74,15 @@ const CapturaBoton = forwardRef(function CapturaBoton(
         if (!blob) { setCapturando(false); return }
         const file = new File([blob], `${filename}.png`, { type: 'image/png' })
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // El share nativo (navigator.share) solo lo intentamos en móvil.
+        // En escritorio, algunos navegadores basados en Chromium (p.ej.
+        // Opera GX en Windows) también dicen soportar canShare con
+        // archivos, pero al llamarlo abren el panel de "Compartir" de
+        // Windows en vez de simplemente descargar el archivo — así que
+        // en PC forzamos siempre la descarga normal.
+        const esMovil = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+        if (esMovil && navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({ files: [file], title: filename })
             setCapturando(false)

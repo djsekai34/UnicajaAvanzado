@@ -592,6 +592,57 @@ export function calcLEBRON(p, team) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// 17. DPM (aproximación — darko.app, de Kostya Medvedovsky)
+//     El DPM real es un modelo bayesiano (filtro de Kalman) que combina
+//     estadísticas de caja con +/- ajustado de TODA la liga, actualizado
+//     día a día dando más peso a lo reciente. No se puede reproducir con
+//     los datos de un solo equipo (haría falta +/- de toda la ACB y su
+//     histórico completo), así que aproximamos combinando:
+//     - el impacto de caja ya calculado en EPM
+//     - el +/- REAL de cada partido (lo más parecido que tenemos a los
+//       datos de entradas/salidas que usa el DPM real), dando más peso
+//       a los partidos más recientes — la misma idea del "día a día" de
+//       DARKO, aunque de forma mucho más simple.
+// ────────────────────────────────────────────────────────────────────────────
+export function calcDPM(p, team, todosLosPartidosStats, partidos) {
+  const mp = p.min || 0
+  if (mp < 1) return null
+
+  const epm = calcEPM(p)
+  if (!epm) return null
+
+  // +/- por 36 min de este tramo (media de los partidos ya filtrados)
+  let pm36 = ((p.plus_minus || 0) / mp) * 36
+
+  // Si tenemos el partido a partido, ponderamos los más recientes con más
+  // peso (decaimiento del 7% por partido hacia atrás en el tiempo).
+  if (todosLosPartidosStats && partidos && todosLosPartidosStats.length > 1) {
+    const conFecha = todosLosPartidosStats
+      .map(s => ({ s, fecha: partidos.find(pp => pp.id === s.partido_id)?.fecha }))
+      .filter(x => x.fecha && (x.s.min || 0) > 0)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha)) // más antiguo primero
+
+    if (conFecha.length > 0) {
+      let sumaPeso = 0, sumaPonderada = 0
+      conFecha.forEach((x, i) => {
+        const antiguedad = conFecha.length - 1 - i // 0 = el más reciente
+        const peso = Math.pow(0.93, antiguedad) * x.s.min
+        const pmPartido = (x.s.plus_minus || 0) / x.s.min * 36
+        sumaPonderada += pmPartido * peso
+        sumaPeso += peso
+      })
+      if (sumaPeso > 0) pm36 = sumaPonderada / sumaPeso
+    }
+  }
+
+  // Mezcla: 60% caja (EPM) + 40% +/- real ponderado (escalado para que se
+  // mueva en un rango parecido al DPM real, aprox. entre -6 y +7).
+  const DPM = epm.epm * 0.6 + (pm36 / 5) * 0.4
+
+  return { dpm: round(DPM, 2) }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // 17. Tendencia VAL — Media móvil últimos N partidos
 // ────────────────────────────────────────────────────────────────────────────
 export function calcTendenciaVal(statsOrdenadas, n = 5) {
@@ -705,6 +756,7 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
   const epm  = calcEPM(p)
   const raptor = calcRAPTOR(p, team)
   const lebron = calcLEBRON(p, team)
+  const dpm = calcDPM(p, team, todosLosPartidosStats, partidos)
 
   // Tendencia y DD/TD requieren histórico
   const tendVal = todosLosPartidosStats
@@ -756,6 +808,7 @@ export function calcAllAdvanced(playerStats, teamStats, puntosRival, todosLosPar
     lebron:  lebron?.lebron  ?? null,
     olebron: lebron?.olebron ?? null,
     dlebron: lebron?.dlebron ?? null,
+    dpm:     dpm?.dpm ?? null,
     // Histórico
     tendencia_val: tendVal,
     dobles_dobles: dd,

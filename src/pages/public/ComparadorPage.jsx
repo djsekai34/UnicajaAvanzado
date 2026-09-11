@@ -135,6 +135,13 @@ const METRICAS_COMP = [
     fmt: (v) => (v != null ? (v > 0 ? "+" : "") + v : "—"),
   },
   {
+    key: "dpm",
+    label: "DPM",
+    desc: "DPM (aprox. — darko.app)",
+    src: "advanced",
+    fmt: (v) => (v != null ? (v > 0 ? "+" : "") + v : "—"),
+  },
+  {
     key: "win_pct_titular",
     label: "V% TIT",
     desc: "% victorias siendo titular",
@@ -175,6 +182,7 @@ const METRICAS_CON_SIGNO = new Set([
   "epm",
   "raptor",
   "lebron",
+  "dpm",
 ]);
 
 const RADAR_KEYS = ["pts", "rt", "as_", "rec", "tap", "val"];
