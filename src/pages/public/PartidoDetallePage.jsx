@@ -44,14 +44,34 @@ const COLS = [
   { key: 'val',  label: 'VAL' },
 ]
 
+// Icono de un vistazo para cada motivo de ausencia — así se distingue el
+// tipo sin tener que leer el texto entero en la tabla del partido.
+const ICONO_MOTIVO = {
+  'Lesión': '🩹',
+  'Decisión técnica': '📋',
+  'Descanso': '😴',
+  'Sanción': '🟥',
+  'Selección nacional': '🌍',
+  'Enfermedad': '🤒',
+  'Otro': '❓',
+}
+
 export default function PartidoDetallePage() {
   const { id } = useParams()
   const [partido, setPartido] = useState(null)
   const [stats, setStats] = useState([])
+  const [ausencias, setAusencias] = useState([])
   const [escudoRival, setEscudoRival] = useState(null)
   const [escudoUnicaja, setEscudoUnicaja] = useState(null)
   const [loading, setLoading] = useState(true)
   const [statPodio, setStatPodio] = useState('pts')
+  const [sortCol, setSortCol] = useState('dorsal')
+  const [sortDir, setSortDir] = useState(-1)
+
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => -d)
+    else { setSortCol(col); setSortDir(-1) }
+  }
 
   useEffect(() => {
     async function cargar() {
@@ -69,6 +89,12 @@ export default function PartidoDetallePage() {
           .select('*, jugadores(nombre, dorsal, foto_url, posicion)')
           .eq('partido_id', id)
         setStats((s || []).filter(row => row.jugadores))
+
+        const { data: a } = await supabase
+          .from('ausencias')
+          .select('*, jugadores(nombre, dorsal, foto_url, posicion)')
+          .eq('partido_id', id)
+        setAusencias((a || []).filter(row => row.jugadores))
 
         // Busca el escudo del rival, y el de Unicaja si se ha personalizado,
         // por nombre (normalizado). Si hay un escudo específico para la
@@ -123,7 +149,12 @@ export default function PartidoDetallePage() {
   const ordenVisual = [podio[1], podio[0], podio[2]]
   const alturaPodio = { 0: 128, 1: 92, 2: 68 } // por posición real (1º,2º,3º)
 
-  const statsOrdenadas = [...stats].sort((a, b) => (b.val || 0) - (a.val || 0))
+  // Valor de la columna por la que se ordena: la mayoría son campos
+  // planos de la stat (s.pts, s.min...), pero "dorsal" vive dentro de la
+  // relación con jugadores (s.jugadores.dorsal), así que se resuelve aparte.
+  const valorOrden = (s, col) => col === 'dorsal' ? (s.jugadores?.dorsal ?? 0) : (s[col] || 0)
+  const statsOrdenadas = [...stats].sort((a, b) => sortDir * (valorOrden(b, sortCol) - valorOrden(a, sortCol)))
+  const ausenciasOrdenadas = [...ausencias].sort((a, b) => (a.jugadores?.dorsal ?? 0) - (b.jugadores?.dorsal ?? 0))
   const totalesBrutos = calcTeamTotals(stats)
   // El total "oficial" de minutos de un partido siempre es un múltiplo de
   // 25 (200 en tiempo reglamentario, 225 con una prórroga, 250 con dos...)
@@ -265,8 +296,14 @@ export default function PartidoDetallePage() {
               <table>
                 <thead>
                   <tr>
-                    <th className="col-sticky">Jugador</th>
-                    {COLS.map(c => <th key={c.key} className="num">{c.label}</th>)}
+                    <th className={`col-sticky${sortCol==='dorsal'?' sorted':''}`} onClick={() => handleSort('dorsal')}>
+                      Jugador {sortCol==='dorsal' ? (sortDir===1?'↓':'↑') : ''}
+                    </th>
+                    {COLS.map(c => (
+                      <th key={c.key} className={`num${sortCol===c.key?' sorted':''}`} onClick={() => handleSort(c.key)}>
+                        {c.label} {sortCol===c.key ? (sortDir===1?'↓':'↑') : ''}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +321,19 @@ export default function PartidoDetallePage() {
                           {c.compuesta ? c.compuesta(s) : (c.fmt ? c.fmt(s[c.key]) : (s[c.key] ?? '—'))}
                         </td>
                       ))}
+                    </tr>
+                  ))}
+                  {ausenciasOrdenadas.map(a => (
+                    <tr key={`ausencia-${a.id}`} style={{ opacity: 0.6 }}>
+                      <td className="col-sticky">
+                        <Link to={`/${slugify(a.jugadores.nombre)}`} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--gris-500)', fontSize: 13 }}>#{a.jugadores.dorsal}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--gris-300)' }}>{a.jugadores.nombre}</span>
+                        </Link>
+                      </td>
+                      <td colSpan={COLS.length} style={{ textAlign: 'center', color: 'var(--gris-400)', fontSize: 13 }}>
+                        No jugó → <span style={{ color: 'var(--gris-200)', fontWeight: 600 }}>{ICONO_MOTIVO[a.motivo] || '❓'} {a.motivo}</span>
+                      </td>
                     </tr>
                   ))}
                   <tr className="fila-totales">

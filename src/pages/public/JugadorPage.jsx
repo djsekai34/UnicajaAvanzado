@@ -68,6 +68,7 @@ export default function JugadorPage() {
   const [stats, setStats]       = useState([])
   const [partidos, setPartidos] = useState([])
   const [allStats, setAllStats] = useState([])
+  const [ausencias, setAusencias] = useState([])
   const [loading, setLoading]   = useState(true)
   const [tab, setTab]           = useState('resumen')
   // Solo se puede descargar imagen en Resumen y Avanzadas (Partido a
@@ -119,6 +120,8 @@ export default function JugadorPage() {
       if (partidoIds.length > 0) {
         const { data: allSt } = await supabase.from('stats').select('*').in('partido_id', partidoIds)
         setAllStats(allSt || [])
+        const { data: aus } = await supabase.from('ausencias').select('*').eq('jugador_id', jug.id).in('partido_id', partidoIds)
+        setAusencias(aus || [])
       }
       setLoading(false)
     }
@@ -146,6 +149,21 @@ export default function JugadorPage() {
     }
     return p && String(p.competicion_id) === filtroComp
   })
+
+  // Partidos que se perdió (no jugó) con su motivo, con el mismo filtro de
+  // competición que las stats — así ambos bloques siempre hablan del mismo
+  // conjunto de partidos.
+  const ausenciasFiltradas = ausencias.filter(a => {
+    const p = partidos.find(p => p.id === a.partido_id)
+    if (filtroComp === 'todas') {
+      return !(haOficialJugado && amistosoId != null && p?.competicion_id === amistosoId)
+    }
+    return p && String(p.competicion_id) === filtroComp
+  })
+  const ausenciasPorMotivo = ausenciasFiltradas.reduce((acc, a) => {
+    acc[a.motivo] = (acc[a.motivo] || 0) + 1
+    return acc
+  }, {})
 
   const n = statsFiltradas.length
   const avg = key => {
@@ -225,7 +243,7 @@ export default function JugadorPage() {
           ← Volver a estadísticas
         </Link>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          {(tab === 'resumen' || tab === 'avanzadas') && n > 0 && (
+          {(tab === 'resumen' || tab === 'avanzadas') && (
             <>
               <button className="btn btn-ghost btn-sm" onClick={iniciarCaptura} disabled={ocultandoControles}>
                 {ocultandoControles ? <><span className="spinner" /> Generando...</> : '📸 Descargar imagen'}
@@ -340,57 +358,79 @@ export default function JugadorPage() {
         ))}
       </div>
 
-      {n === 0 ? (
+      {n === 0 && ausenciasFiltradas.length === 0 ? (
         <div className="empty-state card"><p>No hay estadísticas con este filtro.</p></div>
       ) : (
         <>
           {/* ── RESUMEN ── */}
           {tab === 'resumen' && (
             <div>
-              <div className="stat-grid">
-                {[
-                  { label:'Partidos jugados', value: n, sub: 'esta temporada' },
-                  { label:'De titular', value: statsFiltradas.filter(s => s.titular).length, sub: `de ${n} partidos` },
-                  { label:'Puntos', value: rnd(avg('pts')), accent:true },
-                  { label:'Rebotes', value: rnd(avg('rt')) },
-                  { label:'Asistencias', value: rnd(avg('as_')) },
-                  { label:'Recuperaciones', value: rnd(avg('rec')) },
-                  { label:'Tapones', value: rnd(avg('tap')) },
-                  { label:'Pérdidas', value: rnd(avg('per')) },
-                  { label:'Minutos', value: formatMinutos(avg('min')) },
-                  { label:'+/-', value: rnd(avg('plus_minus')), lima: true },
-                  { label:'Valoración', value: rnd(avg('val')), lima: true },
-                  { label:'Mates', value: sum('mat') },
-                  { label:'Dobles-dobles', value: dd },
-                  { label:'Triples-dobles', value: td },
-                ].map(s => (
-                  <div key={s.label} className={`stat-card${s.accent?' accent':s.lima?' lima':''}`}>
-                    <div className="sc-label">{s.label}</div>
-                    <div className="sc-value">{s.value ?? '—'}</div>
-                    <div className="sc-sub">{s.sub || 'por partido'}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="card">
-                <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, marginBottom:16 }}>Tiros</h3>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px,1fr))', gap:16 }}>
-                  {[
-                    { label:'Tiro de campo', m: avg('t2_anotados')+avg('t3_anotados'), i: avg('t2_intentos')+avg('t3_intentos') },
-                    { label:'Tiros de 2', m: avg('t2_anotados'), i: avg('t2_intentos') },
-                    { label:'Tiros de 3', m: avg('t3_anotados'), i: avg('t3_intentos') },
-                    { label:'Tiros libres', m: avg('tl_anotados'), i: avg('tl_intentos') },
-                  ].map(t => (
-                    <div key={t.label} style={{ background:'var(--negro)', borderRadius:'var(--radius)', padding:16 }}>
-                      <div style={{ fontSize:12, color:'var(--gris-500)', marginBottom:6 }}>{t.label}</div>
-                      <div style={{ fontFamily:'var(--font-display)', fontWeight:700, fontSize:18 }}>{fmtPct(t.m, t.i)}</div>
-                      <div style={{ height:4, background:'var(--gris-700)', borderRadius:99, marginTop:10 }}>
-                        <div style={{ height:'100%', width:`${t.i>0?Math.min(t.m/t.i*100,100):0}%`, background:'var(--verde)', borderRadius:99 }} />
+              {n === 0 ? (
+                <div className="empty-state card"><p>No hay estadísticas con este filtro.</p></div>
+              ) : (
+                <>
+                  <div className="stat-grid">
+                    {[
+                      { label:'Partidos jugados', value: n, sub: 'esta temporada' },
+                      { label:'De titular', value: statsFiltradas.filter(s => s.titular).length, sub: `de ${n} partidos` },
+                      { label:'Puntos', value: rnd(avg('pts')), accent:true },
+                      { label:'Rebotes', value: rnd(avg('rt')) },
+                      { label:'Asistencias', value: rnd(avg('as_')) },
+                      { label:'Recuperaciones', value: rnd(avg('rec')) },
+                      { label:'Tapones', value: rnd(avg('tap')) },
+                      { label:'Pérdidas', value: rnd(avg('per')) },
+                      { label:'Minutos', value: formatMinutos(avg('min')) },
+                      { label:'+/-', value: rnd(avg('plus_minus')), lima: true },
+                      { label:'Valoración', value: rnd(avg('val')), lima: true },
+                      { label:'Mates', value: sum('mat') },
+                      { label:'Dobles-dobles', value: dd },
+                      { label:'Triples-dobles', value: td },
+                    ].map(s => (
+                      <div key={s.label} className={`stat-card${s.accent?' accent':s.lima?' lima':''}`}>
+                        <div className="sc-label">{s.label}</div>
+                        <div className="sc-value">{s.value ?? '—'}</div>
+                        <div className="sc-sub">{s.sub || 'por partido'}</div>
                       </div>
+                    ))}
+                  </div>
+
+                  <div className="card">
+                    <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, marginBottom:16 }}>Tiros</h3>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px,1fr))', gap:16 }}>
+                      {[
+                        { label:'Tiro de campo', m: avg('t2_anotados')+avg('t3_anotados'), i: avg('t2_intentos')+avg('t3_intentos') },
+                        { label:'Tiros de 2', m: avg('t2_anotados'), i: avg('t2_intentos') },
+                        { label:'Tiros de 3', m: avg('t3_anotados'), i: avg('t3_intentos') },
+                        { label:'Tiros libres', m: avg('tl_anotados'), i: avg('tl_intentos') },
+                      ].map(t => (
+                        <div key={t.label} style={{ background:'var(--negro)', borderRadius:'var(--radius)', padding:16 }}>
+                          <div style={{ fontSize:12, color:'var(--gris-500)', marginBottom:6 }}>{t.label}</div>
+                          <div style={{ fontFamily:'var(--font-display)', fontWeight:700, fontSize:18 }}>{fmtPct(t.m, t.i)}</div>
+                          <div style={{ height:4, background:'var(--gris-700)', borderRadius:99, marginTop:10 }}>
+                            <div style={{ height:'100%', width:`${t.i>0?Math.min(t.m/t.i*100,100):0}%`, background:'var(--verde)', borderRadius:99 }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                </>
+              )}
+
+              {ausenciasFiltradas.length > 0 && (
+                <div className="card" style={{ marginTop:24 }}>
+                  <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, marginBottom:16 }}>
+                    Partidos no jugados <span style={{ color:'var(--gris-500)', fontWeight:400, fontSize:14 }}>({ausenciasFiltradas.length})</span>
+                  </h3>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+                    {Object.entries(ausenciasPorMotivo).map(([motivo, count]) => (
+                      <div key={motivo} style={{ background:'var(--negro)', borderRadius:'var(--radius)', padding:'11px 18px' }}>
+                        <div style={{ fontSize:12, color:'var(--gris-500)', marginBottom:4 }}>{motivo}</div>
+                        <div style={{ fontFamily:'var(--font-display)', fontWeight:700, fontSize:18, color:'var(--lima)' }}>{count}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

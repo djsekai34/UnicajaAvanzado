@@ -16,6 +16,17 @@ import html2canvas from 'html2canvas'
 // capturada sale completa igualmente, solo cambia dónde se renderiza
 // mientras se genera.
 //
+// OJO con el ancho: un elemento position:fixed sin `width` explícito se
+// dimensiona por "shrink-to-fit" (como uno absolutamente posicionado), y
+// como aquí queda fuera del viewport (left:-99999px) el navegador no tiene
+// ningún ancho de referencia — con grids de columnas en `fr` (p.ej. el
+// comparador) eso hace que cada columna crezca a su max-content y el
+// conjunto salga muchísimo más ancho de lo que se ve en la página normal.
+// El resultado es una imagen gigantesca (y al verse forzosamente reducida
+// en cualquier visor/red social, con peor calidad aparente). Por eso se le
+// fija aquí el mismo ancho que tendría si se mostrase en su sitio (el
+// ancho de su contenedor padre, que sigue visible y sin tocar).
+//
 // `mostrarBoton`: si es false, el componente no renderiza su propio botón
 // (por si el que lo usa quiere lanzar la captura desde otro sitio, p.ej.
 // tras confirmar algo en un modal previo). En ese caso se controla con una
@@ -40,10 +51,15 @@ const CapturaBoton = forwardRef(function CapturaBoton(
       left: el.style.left,
       top: el.style.top,
       zIndex: el.style.zIndex,
+      width: el.style.width,
     }
 
     try {
       if (displayForzado) {
+        // Ancho que tendría el elemento si se mostrase en su sitio: el de
+        // su contenedor padre (que sigue visible normalmente, no se toca).
+        const anchoDestino = el.parentElement?.clientWidth || el.offsetWidth || 1100
+
         // Se muestra el elemento (para que html2canvas pueda capturarlo),
         // pero fuera de la pantalla — así nunca se ve un parpadeo en la
         // web, aunque en la imagen descargada sí salga completo.
@@ -52,6 +68,7 @@ const CapturaBoton = forwardRef(function CapturaBoton(
         el.style.setProperty('left', '-99999px', 'important')
         el.style.setProperty('top', '0', 'important')
         el.style.setProperty('z-index', '-1', 'important')
+        el.style.setProperty('width', `${anchoDestino}px`, 'important')
       }
 
       const canvas = await html2canvas(el, {
@@ -68,6 +85,7 @@ const CapturaBoton = forwardRef(function CapturaBoton(
         el.style.left = estiloOriginal.left
         el.style.top = estiloOriginal.top
         el.style.zIndex = estiloOriginal.zIndex
+        el.style.width = estiloOriginal.width
       }
 
       canvas.toBlob(async (blob) => {
@@ -120,6 +138,7 @@ const CapturaBoton = forwardRef(function CapturaBoton(
         el.style.left = estiloOriginal.left
         el.style.top = estiloOriginal.top
         el.style.zIndex = estiloOriginal.zIndex
+        el.style.width = estiloOriginal.width
       }
       setCapturando(false)
       onDone?.()

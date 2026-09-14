@@ -55,6 +55,11 @@ const CAMPOS = [
 
 const emptyStats = () => Object.fromEntries(CAMPOS.map(c => [c.key, '']))
 
+// Motivos posibles cuando un jugador convocado/de la plantilla NO juega un
+// partido. Lista fija (no texto libre) para que el resumen en la ficha del
+// jugador pueda agrupar y contar por motivo de forma consistente.
+const MOTIVOS_AUSENCIA = ['Lesión', 'Decisión técnica', 'Descanso', 'Sanción', 'Selección nacional', 'Enfermedad', 'Otro']
+
 // Los minutos se escriben como en cualquier acta de baloncesto: "34:12"
 // (34 min y 12 seg). También admite un decimal normal (34.2) por si se
 // prefiere escribirlo así. Se convierte a minutos decimales para guardar.
@@ -95,6 +100,7 @@ export default function StatsPartido() {
   const [formTitular, setFormTitular] = useState(false)
   const [drafts, setDrafts] = useState({})
   const [draftsTitular, setDraftsTitular] = useState({})
+  const [ausenciasMap, setAusenciasMap] = useState({})
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -121,6 +127,15 @@ export default function StatsPartido() {
     const map = {}
     stats?.forEach(s => { map[s.jugador_id] = s })
     setStatsMap(map)
+
+    const { data: ausencias } = await supabase
+      .from('ausencias')
+      .select('*')
+      .eq('partido_id', id)
+    const amap = {}
+    ausencias?.forEach(a => { amap[a.jugador_id] = a })
+    setAusenciasMap(amap)
+
     setLoading(false)
   }
 
@@ -217,6 +232,26 @@ export default function StatsPartido() {
     load()
   }
 
+  // Marca por qué un jugador de la plantilla no jugó este partido. Se
+  // guarda aparte de "stats" (que es solo para quien SÍ jugó) para no
+  // mezclar cosas ni afectar a las medias/cálculos existentes.
+  const marcarAusencia = async (jugadorId, motivo) => {
+    if (!motivo) return
+    const { error } = await supabase
+      .from('ausencias')
+      .upsert({ partido_id: Number(id), jugador_id: jugadorId, motivo }, { onConflict: 'partido_id,jugador_id' })
+    if (error) { toast.error('Error al guardar el motivo'); return }
+    toast.success('Ausencia registrada')
+    load()
+  }
+
+  const quitarAusencia = async (jugadorId) => {
+    const existing = ausenciasMap[jugadorId]
+    if (!existing) return
+    await supabase.from('ausencias').delete().eq('id', existing.id)
+    load()
+  }
+
   // Guarda el borrador en cada cambio de input
   const setVal = (key, val) => {
     setFormStats(f => {
@@ -270,7 +305,7 @@ export default function StatsPartido() {
               )}
             </div>
             <div style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--gris-500)' }}>
-              {yaMetidos.length} / {jugadores.length} jugadores con stats
+              {yaMetidos.length} con stats · {Object.keys(ausenciasMap).length} de baja · {jugadores.length} en plantilla
             </div>
           </div>
         </div>
@@ -283,19 +318,51 @@ export default function StatsPartido() {
             Sin stats ({sinMeter.length})
           </h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {sinMeter.map(j => (
-              <button key={j.id} className="btn btn-ghost" onClick={() => openEdit(j)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: 'var(--lima)', fontWeight: 700 }}>#{j.dorsal}</span>
-                {j.nombre}
-                {/* Indicador de borrador pendiente */}
-                {drafts[j.id] ? (
-                  <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 700 }}>● Borrador</span>
-                ) : (
-                  <span style={{ color: 'var(--lima)', fontSize: 12 }}>+ Añadir</span>
-                )}
-              </button>
-            ))}
+            {sinMeter.map(j => {
+              const ausencia = ausenciasMap[j.id]
+              return (
+                <div key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {ausencia ? (
+                    <span className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'default' }}>
+                      <span style={{ color: 'var(--lima)', fontWeight: 700 }}>#{j.dorsal}</span>
+                      {j.nombre}
+                      <span className="badge badge-neutral" style={{ fontSize: 10 }}>{ausencia.motivo}</span>
+                      <button
+                        className="btn-close"
+                        style={{ fontSize: 14 }}
+                        title="Quitar motivo"
+                        onClick={() => quitarAusencia(j.id)}
+                      >×</button>
+                    </span>
+                  ) : (
+                    <>
+                      <button className="btn btn-ghost" onClick={() => openEdit(j)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ color: 'var(--lima)', fontWeight: 700 }}>#{j.dorsal}</span>
+                        {j.nombre}
+                        {/* Indicador de borrador pendiente */}
+                        {drafts[j.id] ? (
+                          <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 700 }}>● Borrador</span>
+                        ) : (
+                          <span style={{ color: 'var(--lima)', fontSize: 12 }}>+ Añadir</span>
+                        )}
+                      </button>
+                      <select
+                        defaultValue=""
+                        onChange={e => { const motivo = e.target.value; e.target.value = ''; marcarAusencia(j.id, motivo) }}
+                        style={{
+                          fontSize: 11, background: 'var(--negro)', color: 'var(--gris-300)',
+                          border: '1px solid var(--gris-700)', borderRadius: 'var(--radius)', padding: '6px 8px',
+                        }}
+                      >
+                        <option value="">No jugó por…</option>
+                        {MOTIVOS_AUSENCIA.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
