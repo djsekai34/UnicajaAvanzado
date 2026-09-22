@@ -58,7 +58,7 @@ const emptyStats = () => Object.fromEntries(CAMPOS.map(c => [c.key, '']))
 // Motivos posibles cuando un jugador convocado/de la plantilla NO juega un
 // partido. Lista fija (no texto libre) para que el resumen en la ficha del
 // jugador pueda agrupar y contar por motivo de forma consistente.
-const MOTIVOS_AUSENCIA = ['Lesión', 'Decisión técnica', 'Descanso', 'Sanción', 'Selección nacional', 'Enfermedad', 'Otro']
+const MOTIVOS_AUSENCIA = ['Lesión', 'Decisión técnica', 'Descanso', 'Sanción', 'Selección nacional', 'Enfermedad','Motivos Personales', 'Otro']
 
 // Los minutos se escriben como en cualquier acta de baloncesto: "34:12"
 // (34 min y 12 seg). También admite un decimal normal (34.2) por si se
@@ -204,6 +204,9 @@ export default function StatsPartido() {
     payload.t3_pct = t3i > 0 ? Math.round(t3m / t3i * 1000) / 10 : null
     payload.tl_pct = tli > 0 ? Math.round(tlm / tli * 1000) / 10 : null
     payload.rt     = ro + rd
+    // Los puntos siempre se derivan de los tiros anotados, nunca se
+    // guardan a mano (así no pueden quedar descuadrados).
+    payload.pts    = t2m * 2 + t3m * 3 + tlm
 
     const existing = statsMap[editandoId]
     const { error } = existing
@@ -253,9 +256,18 @@ export default function StatsPartido() {
   }
 
   // Guarda el borrador en cada cambio de input
+  // Campos de tiro de los que dependen los puntos.
+  const CAMPOS_TIRO = ['t2_anotados', 't3_anotados', 'tl_anotados']
+
   const setVal = (key, val) => {
     setFormStats(f => {
       const next = { ...f, [key]: val }
+      // Los puntos no se escriben a mano: se calculan solos a partir de
+      // los tiros anotados (T2×2 + T3×3 + TL×1).
+      if (CAMPOS_TIRO.includes(key)) {
+        const n = k => Number(next[k]) || 0
+        next.pts = n('t2_anotados') * 2 + n('t3_anotados') * 3 + n('tl_anotados')
+      }
       setDrafts(d => ({ ...d, [editandoId]: next }))
       return next
     })
@@ -543,7 +555,10 @@ export default function StatsPartido() {
                 <div className="stats-input-grid">
                   {CAMPOS.map(c => (
                     <div key={c.key} className="form-group">
-                      <label>{c.label}</label>
+                      <label>
+                        {c.label}
+                        {c.key === 'pts' && <span style={{ color: 'var(--verde)', fontSize: 10, marginLeft: 4 }}>auto</span>}
+                      </label>
                       {c.key === 'min' ? (
                         <input
                           type="text"
@@ -551,6 +566,14 @@ export default function StatsPartido() {
                           value={formStats.min}
                           onChange={e => setVal('min', e.target.value)}
                           placeholder="mm:ss"
+                        />
+                      ) : c.key === 'pts' ? (
+                        <input
+                          type="number"
+                          value={formStats.pts}
+                          readOnly
+                          title="Se calcula solo: T2×2 + T3×3 + TL"
+                          style={{ background: 'var(--gris-900)', color: 'var(--verde)', fontWeight: 700, cursor: 'not-allowed' }}
                         />
                       ) : (
                         <input

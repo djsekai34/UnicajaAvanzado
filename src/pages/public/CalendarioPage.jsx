@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import AniversarioBadge from '../../components/public/AniversarioBadge'
-import { competicionInfo, formatJornada } from '../../lib/competiciones'
+import { competicionInfo, formatJornada, generarSlugPartido } from '../../lib/competiciones'
 
 const RECINTO_LOCAL = 'Palacio de los Deportes José María Martín Carpena'
 
@@ -56,6 +56,7 @@ export default function CalendarioPage() {
   const [partidos, setPartidos] = useState([])
   const [loading, setLoading] = useState(true)
   const [cursor, setCursor] = useState(null)
+  const [pabellones, setPabellones] = useState([])
 
   useEffect(() => {
     async function cargar() {
@@ -63,6 +64,9 @@ export default function CalendarioPage() {
       const { data: temps } = await supabase.from('temporadas').select('*').order('id', { ascending: false })
       const activa = temps?.find(t => t.activa) || temps?.[0] || null
       setTemporada(activa)
+
+      const { data: esc } = await supabase.from('escudos_equipos').select('nombre, pabellon')
+      setPabellones(esc || [])
 
       if (activa) {
         const { data: parts } = await supabase
@@ -78,6 +82,14 @@ export default function CalendarioPage() {
     }
     cargar()
   }, [])
+
+  // Busca el pabellón guardado de un equipo (por nombre, normalizado para
+  // que no falle por mayúsculas/tildes). Devuelve null si no hay ninguno.
+  const pabellonDe = (nombreEquipo) => {
+    if (!nombreEquipo) return null
+    const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+    return pabellones.find(e => norm(e.nombre) === norm(nombreEquipo))?.pabellon || null
+  }
 
   // Partido de referencia para saber en qué mes abrir el calendario:
   // el próximo que quede, o si ya pasó la temporada, el último jugado.
@@ -208,8 +220,8 @@ export default function CalendarioPage() {
                     {proximoPartido.es_local === null
                       ? 'Sede neutra'
                       : proximoPartido.es_local
-                        ? RECINTO_LOCAL
-                        : `Fuera de casa · ${proximoPartido.rival}`}
+                        ? (pabellonDe('UNICAJA') || RECINTO_LOCAL)
+                        : (pabellonDe(proximoPartido.rival) || `Fuera de casa · ${proximoPartido.rival}`)}
                   </div>
                 </div>
               </div>
@@ -293,7 +305,7 @@ export default function CalendarioPage() {
                           : p.es_local ? 'Unicaja vs ' + p.rival : p.rival + ' vs Unicaja'
                         const titulo = `${info.abbr}${tituloJornada} · ${tituloRival} · ${fmtFechaLarga(fechaISO)}${tituloResultado}`
                         const Contenedor = jugado ? Link : 'div'
-                        const propsContenedor = jugado ? { to: `/partido/${p.id}` } : {}
+                        const propsContenedor = jugado ? { to: `/partido/${generarSlugPartido(p)}` } : {}
                         return (
                           <Contenedor
                             key={p.id}
@@ -337,6 +349,9 @@ export default function CalendarioPage() {
               </div>
               <div className="calendario-leyenda-item">
                 <span className="calendario-leyenda-swatch visitante" /> Fuera
+              </div>
+              <div className="calendario-leyenda-item">
+                <span className="calendario-leyenda-swatch neutral" /> Sede neutra
               </div>
             </div>
           )}
@@ -533,6 +548,7 @@ export default function CalendarioPage() {
         .calendario-leyenda-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
         .calendario-leyenda-swatch.local { background: rgba(78,158,71,.4); border: 1px solid var(--verde); }
         .calendario-leyenda-swatch.visitante { background: var(--gris-700); border: 1px solid var(--gris-600); }
+        .calendario-leyenda-swatch.neutral { background: rgba(234,179,8,.4); border: 1px solid #F59E0B; }
 
         @media (max-width: 640px) {
           .calendario-mes-header { flex-direction: column; align-items: stretch; gap: 10px; }

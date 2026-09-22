@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { competicionInfo, formatJornada } from '../../lib/competiciones'
+import { competicionInfo, formatJornada, datosDesdeSlugPartido, codigoEquipo } from '../../lib/competiciones'
 import { calcTeamTotals, formatMinutos } from '../../lib/advanced'
 import logoUnicaja from '../../assets/Unicaja.png'
 
@@ -27,13 +27,23 @@ const STATS_PODIO = [
   { key: 'plus_minus', label: '+/-' },
 ]
 
+// Formatea una línea de tiro como "15/20 (75%)". Si no hay intentos, se
+// deja solo el 0/0 sin porcentaje (no tiene sentido un 0% sin tirar).
+function fmtTiro(anotados, intentos) {
+  const a = anotados ?? 0
+  const i = intentos ?? 0
+  if (i === 0) return `${a}/${i}`
+  return `${a}/${i} (${Math.round((a / i) * 100)}%)`
+}
+
 // Columnas de la tabla de estadísticas básicas del partido.
 const COLS = [
   { key: 'min',  label: 'MIN',  fmt: v => v != null ? formatMinutos(v) : '—' },
   { key: 'pts',  label: 'PTS' },
-  { key: 't2_anotados', label: 'T2',  compuesta: (s) => `${s.t2_anotados ?? 0}/${s.t2_intentos ?? 0}` },
-  { key: 't3_anotados', label: 'T3',  compuesta: (s) => `${s.t3_anotados ?? 0}/${s.t3_intentos ?? 0}` },
-  { key: 'tl_anotados', label: 'TL',  compuesta: (s) => `${s.tl_anotados ?? 0}/${s.tl_intentos ?? 0}` },
+  { key: 'tc',   label: 'TC',   compuesta: (s) => fmtTiro((s.t2_anotados ?? 0) + (s.t3_anotados ?? 0), (s.t2_intentos ?? 0) + (s.t3_intentos ?? 0)) },
+  { key: 't2_anotados', label: 'T2',  compuesta: (s) => fmtTiro(s.t2_anotados, s.t2_intentos) },
+  { key: 't3_anotados', label: 'T3',  compuesta: (s) => fmtTiro(s.t3_anotados, s.t3_intentos) },
+  { key: 'tl_anotados', label: 'TL',  compuesta: (s) => fmtTiro(s.tl_anotados, s.tl_intentos) },
   { key: 'rt',   label: 'REB' },
   { key: 'as_',  label: 'AST' },
   { key: 'rec',  label: 'REC' },
@@ -53,15 +63,20 @@ const ICONO_MOTIVO = {
   'Sanción': '🟥',
   'Selección nacional': '🌍',
   'Enfermedad': '🤒',
+  'Motivos Personales': '🏠',
   'Otro': '❓',
+  
+
 }
 
 export default function PartidoDetallePage() {
-  const { id } = useParams()
+  const { slug } = useParams()
+  const datosSlug = datosDesdeSlugPartido(slug)
   const [partido, setPartido] = useState(null)
   const [stats, setStats] = useState([])
   const [ausencias, setAusencias] = useState([])
   const [escudoRival, setEscudoRival] = useState(null)
+  const [pabellonLocal, setPabellonLocal] = useState(null)
   const [escudoUnicaja, setEscudoUnicaja] = useState(null)
   const [loading, setLoading] = useState(true)
   const [statPodio, setStatPodio] = useState('pts')
@@ -76,31 +91,40 @@ export default function PartidoDetallePage() {
   useEffect(() => {
     async function cargar() {
       setLoading(true)
-      const { data: p } = await supabase
-        .from('partidos')
-        .select('*, competiciones(nombre), temporadas(nombre)')
-        .eq('id', id)
-        .single()
+      let p = null
+      if (datosSlug?.fecha) {
+        const { data: candidatos } = await supabase
+          .from('partidos')
+          .select('*, competiciones(nombre), temporadas(nombre)')
+          .eq('fecha', datosSlug.fecha)
+        if (candidatos && candidatos.length > 1 && datosSlug.rivalCod) {
+          // Más de un partido ese día (raro, pero puede pasar): se
+          // desempata por el código de rival que lleva la URL.
+          p = candidatos.find(c => codigoEquipo(c.rival) === datosSlug.rivalCod) || candidatos[0]
+        } else {
+          p = candidatos?.[0] || null
+        }
+      }
       setPartido(p || null)
 
       if (p) {
         const { data: s } = await supabase
           .from('stats')
           .select('*, jugadores(nombre, dorsal, foto_url, posicion)')
-          .eq('partido_id', id)
+          .eq('partido_id', p.id)
         setStats((s || []).filter(row => row.jugadores))
 
         const { data: a } = await supabase
           .from('ausencias')
           .select('*, jugadores(nombre, dorsal, foto_url, posicion)')
-          .eq('partido_id', id)
+          .eq('partido_id', p.id)
         setAusencias((a || []).filter(row => row.jugadores))
 
         // Busca el escudo del rival, y el de Unicaja si se ha personalizado,
         // por nombre (normalizado). Si hay un escudo específico para la
         // temporada de este partido (ej. el especial del 50 aniversario),
         // ese tiene prioridad sobre el "de siempre" (temporada_id vacío).
-        const { data: escudos } = await supabase.from('escudos_equipos').select('nombre, escudo_url, temporada_id')
+        const { data: escudos } = await supabase.from('escudos_equipos').select('nombre, escudo_url, pabellon, temporada_id')
         const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
         const mejorEscudo = (nombreBuscado) => {
           const candidatos = escudos?.filter(e => norm(e.nombre) === norm(nombreBuscado)) || []
@@ -110,11 +134,18 @@ export default function PartidoDetallePage() {
         }
         setEscudoRival(mejorEscudo(p.rival))
         setEscudoUnicaja(mejorEscudo('UNICAJA'))
+
+        // Pabellón del equipo que juega en casa (en sede neutra no aplica).
+        const pabellonDe = (nombreBuscado) =>
+          escudos?.filter(e => norm(e.nombre) === norm(nombreBuscado)).find(e => e.pabellon)?.pabellon || null
+        setPabellonLocal(
+          p.es_local === null ? null : pabellonDe(p.es_local ? 'UNICAJA' : p.rival)
+        )
       }
       setLoading(false)
     }
     cargar()
-  }, [id])
+  }, [slug])
 
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>
   if (!partido) return <div className="empty-state card"><p>Partido no encontrado.</p></div>
@@ -125,7 +156,9 @@ export default function PartidoDetallePage() {
   const fechaFmt = new Date(partido.fecha + 'T12:00:00').toLocaleDateString('es-ES', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
-  const lugar = partido.es_local === null ? 'Sede neutra' : partido.es_local ? RECINTO_LOCAL : `Fuera de casa · ${partido.rival}`
+  const lugar = partido.es_local === null
+    ? 'Sede neutra'
+    : pabellonLocal || (partido.es_local ? RECINTO_LOCAL : `Fuera de casa · ${partido.rival}`)
 
   // Datos de cada equipo para el marcador (izquierda = local, derecha =
   // visitante — salvo sede neutra, que se deja Unicaja a la izquierda).

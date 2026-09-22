@@ -53,7 +53,7 @@ export default function App() {
         <Route path="comparador" element={<ComparadorPage />} />
         <Route path="equipo" element={<EquipoPage />} />
         <Route path="calendario" element={<CalendarioPage />} />
-        <Route path="partido/:id" element={<PartidoDetallePage />} />
+        <Route path="partido/:slug" element={<PartidoDetallePage />} />
         <Route path=":slug" element={<JugadorPage />} />
         <Route path="sobre-mi" element={<SobreMiPage />} />
       </Route>

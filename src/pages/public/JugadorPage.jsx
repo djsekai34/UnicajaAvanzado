@@ -374,7 +374,7 @@ export default function JugadorPage() {
                       { label:'Partidos jugados', value: n, sub: 'esta temporada' },
                       { label:'De titular', value: statsFiltradas.filter(s => s.titular).length, sub: `de ${n} partidos` },
                       { label:'Puntos', value: rnd(avg('pts')), accent:true },
-                      { label:'Rebotes', value: rnd(avg('rt')) },
+                      { label:'Rebotes', value: rnd(avg('rt')), desglose: `${rnd(avg('ro'))} of. · ${rnd(avg('rd'))} def.` },
                       { label:'Asistencias', value: rnd(avg('as_')) },
                       { label:'Recuperaciones', value: rnd(avg('rec')) },
                       { label:'Tapones', value: rnd(avg('tap')) },
@@ -388,7 +388,10 @@ export default function JugadorPage() {
                     ].map(s => (
                       <div key={s.label} className={`stat-card${s.accent?' accent':s.lima?' lima':''}`}>
                         <div className="sc-label">{s.label}</div>
-                        <div className="sc-value">{s.value ?? '—'}</div>
+                        <div className="sc-value">
+                          {s.value ?? '—'}
+                          {s.desglose && <span className="sc-desglose">{s.desglose}</span>}
+                        </div>
                         <div className="sc-sub">{s.sub || 'por partido'}</div>
                       </div>
                     ))}

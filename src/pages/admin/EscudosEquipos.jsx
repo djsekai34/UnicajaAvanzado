@@ -14,6 +14,7 @@ export default function EscudosEquipos() {
   const [nombreObjetivo, setNombreObjetivo] = useState('') // nombre guardado en la tabla
   const [temporadaObjetivo, setTemporadaObjetivo] = useState(null) // null = escudo de siempre
   const [escudoUrl, setEscudoUrl] = useState('')
+  const [pabellon, setPabellon] = useState('')
   const [errorImagen, setErrorImagen] = useState(false)
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -50,6 +51,7 @@ export default function EscudosEquipos() {
     setNombreObjetivo(nombre)
     setTemporadaObjetivo(temporadaId)
     setEscudoUrl(existente?.escudo_url || '')
+    setPabellon(existente?.pabellon || '')
     setErrorImagen(false)
     setEditId(existente?.id || null)
     setModal(true)
@@ -94,6 +96,7 @@ export default function EscudosEquipos() {
     const payload = {
       nombre: nombreObjetivo.trim(),
       escudo_url: escudoUrl.trim(),
+      pabellon: pabellon.trim() || null,
       temporada_id: temporadaObjetivo,
     }
     const { error } = editId
@@ -151,6 +154,9 @@ export default function EscudosEquipos() {
                 ? `Usando el escudo especial de ${temporadaActiva?.nombre} ahora mismo`
                 : 'Usando el escudo de siempre ahora mismo'}
             </div>
+            <div style={{ fontSize: 12, color: escudoUnicajaVisible?.pabellon ? 'var(--gris-300)' : 'var(--gris-600)', marginTop: 2 }}>
+              🏟️ {escudoUnicajaVisible?.pabellon || 'Sin pabellón guardado'}
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {temporadaActiva && (
@@ -178,7 +184,7 @@ export default function EscudosEquipos() {
         <div className="card">
           <table>
             <thead>
-              <tr><th style={{ width: 50 }}></th><th>Rival</th><th></th></tr>
+              <tr><th style={{ width: 50 }}></th><th>Rival</th><th>Pabellón</th><th></th></tr>
             </thead>
             <tbody>
               {rivales.map(nombreRival => {
@@ -192,6 +198,9 @@ export default function EscudosEquipos() {
                       }
                     </td>
                     <td>{nombreRival}</td>
+                    <td style={{ color: e?.pabellon ? 'var(--gris-300)' : 'var(--gris-600)', fontSize: 13 }}>
+                      {e?.pabellon || '—'}
+                    </td>
                     <td style={{ width: 140, textAlign: 'right' }}>
                       <button className="btn btn-ghost btn-sm" onClick={() => openParaRival(nombreRival)}>
                         {e ? 'Cambiar escudo' : '+ Añadir escudo'}
@@ -247,6 +256,14 @@ export default function EscudosEquipos() {
                   <label>...o súbelo directamente desde tu ordenador</label>
                   <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
                   {uploading && <p style={{ fontSize: 12.5, color: 'var(--gris-500)', marginTop: 6 }}>Subiendo...</p>}
+                </div>
+
+                <div className="form-group">
+                  <label>Pabellón</label>
+                  <input value={pabellon} onChange={e => setPabellon(e.target.value)} placeholder="ej: Palacio de Deportes José María Martín Carpena" />
+                  <p style={{ fontSize: 11.5, color: 'var(--gris-500)', marginTop: 6 }}>
+                    Se muestra en el calendario (próximo partido) y en la ficha del partido cuando este equipo juega como local.
+                  </p>
                 </div>
 
                 <div className="form-actions">

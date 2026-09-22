@@ -113,6 +113,24 @@ export default function EquipoPage() {
   const rankingsRef = useRef(null)
   const toggleExpandido = (key) => setExpandido(e => ({ ...e, [key]: !e[key] }))
 
+  // Al descargar la imagen del ranking, el botón "Ver todo (X)" / "Ver
+  // menos" de cada categoría se oculta un instante (es un control de la
+  // web, no aporta nada en una imagen fija) — mismo patrón que en la
+  // ficha del jugador.
+  const capturaBotonRef = useRef(null)
+  const [ocultandoBotones, setOcultandoBotones] = useState(false)
+  const [capturaTrigger, setCapturaTrigger] = useState(0)
+
+  useEffect(() => {
+    if (capturaTrigger > 0) capturaBotonRef.current?.capturar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capturaTrigger])
+
+  const iniciarCapturaRanking = () => {
+    setOcultandoBotones(true)
+    setCapturaTrigger(t => t + 1)
+  }
+
   // Títulos conseguidos esta temporada, cruzados con TODAS las competiciones
   // para poder pintar también las que no se han ganado (apagadas)
   const [titulos, setTitulos] = useState([])
@@ -240,7 +258,16 @@ export default function EquipoPage() {
             <div>
               <span style={{ color: 'var(--blanco)', fontWeight: 700 }}>Rankings</span> — top 5 de la plantilla por media en cada estadística, por competición, tramo de meses, mes en concreto. Pulsa en un jugador para ir a su ficha.
             </div>
-            <CapturaBoton targetRef={rankingsRef} filename="ranking-unicaja-avanzado" label="📸 Descargar ranking" />
+            <button className="btn btn-ghost btn-sm" onClick={iniciarCapturaRanking} disabled={ocultandoBotones}>
+              {ocultandoBotones ? <><span className="spinner" /> Generando...</> : '📸 Descargar ranking'}
+            </button>
+            <CapturaBoton
+              ref={capturaBotonRef}
+              targetRef={rankingsRef}
+              mostrarBoton={false}
+              onDone={() => setOcultandoBotones(false)}
+              filename="ranking-unicaja-avanzado"
+            />
           </div>
 
           <div ref={rankingsRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, padding: 4 }}>
@@ -278,7 +305,7 @@ export default function EquipoPage() {
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
-                    style={{ width: '100%', marginTop: 12, justifyContent: 'center' }}
+                    style={{ width: '100%', marginTop: 12, justifyContent: 'center', display: ocultandoBotones ? 'none' : 'flex' }}
                     onClick={() => toggleExpandido(cat.key)}
                   >
                     {abierto ? 'Ver menos' : `Ver todo (${cat.ordenado.length})`}
