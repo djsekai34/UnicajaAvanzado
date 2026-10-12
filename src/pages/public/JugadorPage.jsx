@@ -19,6 +19,10 @@ function slugify(nombre) {
     .replace(/[^a-z0-9-]/g, '')
 }
 
+// Campos que la BCL no registra (se guardan como null en esos partidos):
+// su media se calcula solo sobre los partidos que sí tienen el dato.
+const CAMPOS_SIN_BCL = ['tr', 'mat', 'fr']
+
 function rnd(v, d=1) { return v != null ? Math.round(v*10**d)/10**d : null }
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -168,9 +172,13 @@ export default function JugadorPage() {
   const n = statsFiltradas.length
   const avg = key => {
     if (n === 0) return null
-    return key === 'min'
-      ? sumarMinutos(statsFiltradas.map(s => s.min)) / n
-      : statsFiltradas.reduce((a,s) => a+(s[key]||0), 0) / n
+    if (key === 'min') return sumarMinutos(statsFiltradas.map(s => s.min)) / n
+    if (CAMPOS_SIN_BCL.includes(key)) {
+      const conDato = statsFiltradas.filter(s => s[key] != null)
+      if (conDato.length === 0) return null
+      return conDato.reduce((a,s) => a+s[key], 0) / conDato.length
+    }
+    return statsFiltradas.reduce((a,s) => a+(s[key]||0), 0) / n
   }
   const sum = key => key === 'min'
     ? sumarMinutos(statsFiltradas.map(s => s.min))
@@ -487,9 +495,9 @@ export default function JugadorPage() {
                         <td className="num">{s.per}</td>
                         <td className="num">{s.rec}</td>
                         <td className="num">{s.tap}</td>
-                        <td className="num">{s.mat}</td>
+                        <td className="num">{s.mat ?? '—'}</td>
                         <td className="num">{s.fp}</td>
-                        <td className="num">{s.fr}</td>
+                        <td className="num">{s.fr ?? '—'}</td>
                         <td className={`num ${pm>0?'pos':pm<0?'neg':''}`}>{pm!=null?(pm>0?'+':'')+pm:'—'}</td>
                         <td className="num lima">{s.val}</td>
                       </tr>
@@ -511,9 +519,9 @@ export default function JugadorPage() {
                     <td className="num">{rnd(avg('per'))}</td>
                     <td className="num">{rnd(avg('rec'))}</td>
                     <td className="num">{rnd(avg('tap'))}</td>
-                    <td className="num">{rnd(avg('mat'))}</td>
+                    <td className="num">{rnd(avg('mat')) ?? '—'}</td>
                     <td className="num">{rnd(avg('fp'))}</td>
-                    <td className="num">{rnd(avg('fr'))}</td>
+                    <td className="num">{rnd(avg('fr')) ?? '—'}</td>
                     <td className={`num ${avg('plus_minus')>0?'pos':avg('plus_minus')<0?'neg':''}`}>
                       {rnd(avg('plus_minus'))!=null?(rnd(avg('plus_minus'))>0?'+':'')+rnd(avg('plus_minus')):'—'}
                     </td>

@@ -156,6 +156,9 @@ export default function EstadisticasPage() {
         // para ordenarlas usamos el campo numérico "_sort" (anotados) en
         // vez del texto formateado.
         const SORT_KEY_MAP = { t2: 't2_sort', t3: 't3_sort', tl: 'tl_sort', tc: 'tc_sort' }
+        if (sortCol === 'dorsal') {
+          return sortDir * ((b.jugador?.dorsal ?? -999) - (a.jugador?.dorsal ?? -999))
+        }
         const key = SORT_KEY_MAP[sortCol] || sortCol
         const va = tab === 'basicas' ? (a[key] ?? -999) : (a.advanced?.[sortCol] ?? -999)
         const vb = tab === 'basicas' ? (b[key] ?? -999) : (b.advanced?.[sortCol] ?? -999)
@@ -377,7 +380,9 @@ export default function EstadisticasPage() {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ minWidth: 160 }}>Jugador</th>
+                    <th style={{ minWidth: 160 }} className={sortCol==='dorsal'?'sorted':''} onClick={() => handleSort('dorsal')}>
+                      Jugador {sortCol==='dorsal' ? (sortDir===-1?'↓':'↑') : ''}
+                    </th>
                     {BASIC_COLS.map(c => (
                       <th key={c.key} className={`num${sortCol===c.key?' sorted':''}`} onClick={() => handleSort(c.key)}
                         title={c.desc}>
@@ -447,7 +452,9 @@ export default function EstadisticasPage() {
               <table>
                 <thead>
                   <tr>
-                    <th className="col-sticky" style={{ minWidth: 160 }}>Jugador</th>
+                    <th className={`col-sticky${sortCol==='dorsal'?' sorted':''}`} style={{ minWidth: 160 }} onClick={() => handleSort('dorsal')}>
+                      Jugador {sortCol==='dorsal' ? (sortDir===-1?'↓':'↑') : ''}
+                    </th>
                     {ADV_COLS.map(c => (
                       <th key={c.key} className={`num${sortCol===c.key?' sorted':''}`} onClick={() => handleSort(c.key)} title={c.desc}>
                         {c.label} {sortCol===c.key ? (sortDir===-1?'↓':'↑') : ''}

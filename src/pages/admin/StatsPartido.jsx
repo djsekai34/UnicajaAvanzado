@@ -53,6 +53,13 @@ const CAMPOS = [
   { key: 'val',         label: 'VAL',  tipo: 'entero' },
 ]
 
+// La BCL no publica estos campos en su box score (tapones recibidos, mates
+// y faltas recibidas). En partidos de BCL se ocultan y se guardan como null
+// ("sin dato"); en el resto de competiciones, si se dejan en blanco se
+// guardan como 0 — así null siempre significa "esta competición no lo
+// registra" y las medias de la ficha del jugador no se desvirtúan.
+const CAMPOS_SIN_BCL = ['tr', 'mat', 'fr']
+
 const emptyStats = () => Object.fromEntries(CAMPOS.map(c => [c.key, '']))
 
 // Motivos posibles cuando un jugador convocado/de la plantilla NO juega un
@@ -103,6 +110,8 @@ export default function StatsPartido() {
   const [ausenciasMap, setAusenciasMap] = useState({})
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const esBCL = partido?.competiciones?.nombre === 'BCL'
 
   const load = async () => {
     const { data: p } = await supabase
@@ -188,7 +197,13 @@ export default function StatsPartido() {
         payload.min = parseMinutos(v)
         return
       }
-      payload[c.key] = v === '' || v === null ? null : (c.tipo === 'decimal') ? parseFloat(v) : parseInt(v)
+      if (CAMPOS_SIN_BCL.includes(c.key) && esBCL) {
+        payload[c.key] = null
+        return
+      }
+      let valor = v === '' || v === null ? null : (c.tipo === 'decimal') ? parseFloat(v) : parseInt(v)
+      if (CAMPOS_SIN_BCL.includes(c.key) && (valor === null || isNaN(valor))) valor = 0
+      payload[c.key] = valor
     })
 
     const t2m = payload.t2_anotados || 0
@@ -552,8 +567,13 @@ export default function StatsPartido() {
                 </div>
 
                 {/* Grid de inputs */}
+                {esBCL && (
+                  <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--gris-500)' }}>
+                    BCL no registra TR, MAT ni FR en su box score, por eso no se piden aquí.
+                  </div>
+                )}
                 <div className="stats-input-grid">
-                  {CAMPOS.map(c => (
+                  {CAMPOS.filter(c => !(esBCL && CAMPOS_SIN_BCL.includes(c.key))).map(c => (
                     <div key={c.key} className="form-group">
                       <label>
                         {c.label}
