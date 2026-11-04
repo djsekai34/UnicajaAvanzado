@@ -54,8 +54,17 @@ const CapturaBoton = forwardRef(function CapturaBoton(
       width: el.style.width,
     }
 
+    // El truco de sacarlo fuera de pantalla solo hace falta si el elemento
+    // está realmente oculto ahora mismo (p.ej. otra vista seleccionada). Si
+    // ya está visible en su sitio (p.ej. la vista "Tabla" activa), forzarlo
+    // de todas formas lo sacaría de su posición normal un instante — se ve
+    // como si "desapareciera" en plena pantalla — así que en ese caso se
+    // captura tal cual está, sin tocar nada.
+    const estabaOculto = window.getComputedStyle(el).display === 'none'
+    const aplicarTruco = displayForzado && estabaOculto
+
     try {
-      if (displayForzado) {
+      if (aplicarTruco) {
         // Ancho que tendría el elemento si se mostrase en su sitio: el de
         // su contenedor padre (que sigue visible normalmente, no se toca).
         const anchoDestino = el.parentElement?.clientWidth || el.offsetWidth || 1100
@@ -79,7 +88,7 @@ const CapturaBoton = forwardRef(function CapturaBoton(
 
       // Ya tenemos la imagen capturada, no hace falta seguir forzando la
       // visibilidad del elemento.
-      if (displayForzado) {
+      if (aplicarTruco) {
         el.style.display = estiloOriginal.display
         el.style.position = estiloOriginal.position
         el.style.left = estiloOriginal.left
@@ -132,7 +141,7 @@ const CapturaBoton = forwardRef(function CapturaBoton(
       }, 'image/png')
     } catch (err) {
       console.error('Error al generar la captura', err)
-      if (displayForzado) {
+      if (aplicarTruco) {
         el.style.display = estiloOriginal.display
         el.style.position = estiloOriginal.position
         el.style.left = estiloOriginal.left

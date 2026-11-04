@@ -6,10 +6,10 @@ import {
   ResponsiveContainer, ReferenceLine, ScatterChart, Scatter, ZAxis, Cell, LabelList
 } from 'recharts'
 import { usePublicData } from '../../hooks/usePublicData'
-import FiltrosBar from '../../components/public/FiltrosBar'
-import AniversarioBadge from '../../components/public/AniversarioBadge'
-import { formatMinutos } from '../../lib/advanced'
-import EquipoRecordCard from '../../components/public/EquipoRecordCard'
+import FiltrosBar from '../../components/public/Filtros'
+import AniversarioBadge from '../../components/public/Aniversario'
+import { formatMinutos } from '../../lib/avanzadas'
+import EquipoRecordCard from '../../components/public/EquipoRecordTarjeta'
 
 const BASIC_COLS = [
   { key: 'partidos', label: 'PJ', desc: 'Partidos jugados' },
@@ -34,27 +34,27 @@ const ADV_COLS = [
   { key: 'ts_pct',   label: 'TS%',     desc: 'True Shooting %',        fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'efg_pct',  label: 'eFG%',    desc: 'Effective FG%',          fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'usg_pct',  label: 'USG%',    desc: 'Usage Rate',             fmt: v => v != null ? v+'%' : '—', type: 'pct' },
-  { key: 'per',      label: 'PER',     desc: 'Player Efficiency Rating', fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'per',      label: 'PER',     desc: 'Player Efficiency Rating', fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
   { key: 'bpm',      label: 'BPM',     desc: 'Box Plus/Minus',         fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
-  { key: 'ws',       label: 'WS',      desc: 'Win Shares',             fmt: v => v != null ? v : '—', type: 'rating' },
-  { key: 'ows',      label: 'OWS',     desc: 'Offensive Win Shares (parte ofensiva de las Win Shares)', fmt: v => v != null ? v : '—', type: 'rating' },
-  { key: 'dws',      label: 'DWS',     desc: 'Defensive Win Shares (parte defensiva de las Win Shares)', fmt: v => v != null ? v : '—', type: 'rating' },
-  { key: 'ws40',     label: 'WS/40',   desc: 'Win Shares por 40 min',  fmt: v => v != null ? v : '—', type: 'rating' },
-  { key: 'ortg',     label: 'ORTG',    desc: 'Offensive Rating',       fmt: v => v != null ? v : '—', type: 'rating' },
-  { key: 'drtg',     label: 'DRTG',    desc: 'Defensive Rating',       fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'ws',       label: 'WS',      desc: 'Win Shares',             fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
+  { key: 'ows',      label: 'OWS',     desc: 'Offensive Win Shares (parte ofensiva de las Win Shares)', fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
+  { key: 'dws',      label: 'DWS',     desc: 'Defensive Win Shares (parte defensiva de las Win Shares)', fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
+  { key: 'ws40',     label: 'WS/40',   desc: 'Win Shares por 40 min',  fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
+  { key: 'ortg',     label: 'ORTG',    desc: 'Offensive Rating',       fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
+  { key: 'drtg',     label: 'DRTG',    desc: 'Defensive Rating',       fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
   { key: 'net_rating',label:'NRTG',    desc: 'Net Rating',             fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'ast_pct',  label: 'AST%',    desc: 'Assist Percentage',      fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'reb_pct',  label: 'REB%',    desc: 'Rebound Percentage',     fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'oreb_pct', label: 'OREB%',   desc: 'Offensive Rebound %',    fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'dreb_pct', label: 'DREB%',   desc: 'Defensive Rebound %',    fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'tov_pct',  label: 'TOV%',    desc: 'Turnover %',             fmt: v => v != null ? v+'%' : '—', type: 'pct' },
-  { key: 'ast_to',   label: 'AST/TO',  desc: 'Asistencias/Pérdidas',   fmt: v => v != null ? v : '—', type: 'rating' },
-  { key: 'pf40',     label: 'FP/40',   desc: 'Faltas personales por 40 min', fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'ast_to',   label: 'AST/TO',  desc: 'Asistencias/Pérdidas',   fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
+  { key: 'pf40',     label: 'FP/40',   desc: 'Faltas personales por 40 min', fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
   { key: 'epm',      label: 'EPM',     desc: 'Estimated Plus/Minus',   fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'raptor',   label: 'RAPTOR',  desc: 'RAPTOR (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'lebron',   label: 'LEBRON',  desc: 'LEBRON (aprox.)',        fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
   { key: 'dpm',      label: 'DPM',     desc: 'DPM (aprox. — darko.app)', fmt: v => v != null ? (v>0?'+':'')+v : '—', type: 'pm' },
-  { key: 'tendencia_val', label: 'TEND', desc: 'Tendencia VAL (últ.5)', fmt: v => v != null ? v : '—', type: 'rating' },
+  { key: 'tendencia_val', label: 'TEND', desc: 'Tendencia VAL (últ.5)', fmt: v => v != null ? Math.round(v * 100) / 100 : '—', type: 'rating' },
   { key: 'win_pct_titular',  label: 'V% TIT', desc: '% de victorias en los partidos que fue titular',  fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'win_pct_suplente', label: 'V% SUP', desc: '% de victorias en los partidos que fue suplente', fmt: v => v != null ? v+'%' : '—', type: 'pct' },
   { key: 'aportacion_equipo_pct', label: 'APORT%', desc: '% de la producción total del equipo (PTS+REB+AST+ROB+TAP) que pone este jugador', fmt: v => v != null ? v+'%' : '—', type: 'pct' },
@@ -657,7 +657,7 @@ export default function EstadisticasPage() {
           {tab === 'ayuda' && (
             <>
               <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--gris-800)', borderLeft: '3px solid var(--gris-600)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--gris-400)', lineHeight: 1.6 }}>
-                <span style={{ color: 'var(--blanco)', fontWeight: 700 }}>Glosario de métricas</span> — descripción detallada de cada estadística avanzada: qué mide, cómo se calcula y cómo interpretarla. Las métricas de impacto (EPM, RAPTOR, LEBRON, DPM) son <span style={{ color: 'var(--gris-300)' }}>aproximaciones basadas en box score</span>, ya que las versiones reales requieren datos de tracking de cámara (o, en el caso del DPM, +/- de toda la liga) que no están disponibles públicamente en la ACB.
+                <span style={{ color: 'var(--blanco)', fontWeight: 700 }}>Glosario de métricas</span> — descripción detallada de cada estadística avanzada: qué mide, cómo se calcula y cómo interpretarla. Las métricas de impacto (EPM, RAPTOR, LEBRON, DPM) son <span style={{ color: 'var(--gris-300)' }}>aproximaciones basadas en box score</span>, ya que las versiones reales requieren datos de tracking de cámara (o, en el caso del DPM, +/- de toda la liga) que no están disponibles públicamente en la ACB. Además, las constantes de liga (ritmo, % de tiro, % de rebote…) son aproximaciones del baloncesto europeo y las fórmulas de PER, BPM y Win Shares nacen en la NBA, así que sus escalas de referencia (All-Star, MVP…) son orientativas.
               </div>
             <div style={{ display: 'grid', gap: 16 }}>
               {[
@@ -668,44 +668,47 @@ export default function EstadisticasPage() {
                 { grupo: 'Uso y creación', items: [
                   { label: 'USG% — Usage Rate', formula: '100 × (FGA + 0.44×FTA + TOV) × (TmMin/5) / (Min × (TmFGA + 0.44×TmFTA + TmTOV))', desc: 'Porcentaje de posesiones del equipo que termina un jugador mientras está en pista. Un base creador suele tener 25-30%, un rol player 10-15%.' },
                   { label: 'AST% — Assist Percentage', formula: '100 × AST / ((Min/(TmMin/5)) × TmFGM − FGM)', desc: 'Porcentaje estimado de canastas del equipo que asiste el jugador mientras está en pista.' },
-                  { label: 'AST/TO — Ratio Asistencias/Pérdidas', formula: 'AST / TOV', desc: 'Cuántas asistencias da por cada pérdida. Un ratio superior a 2 es bueno; superior a 3 es excelente. Si no tiene pérdidas se muestra directamente el número de asistencias.' },
+                  { label: 'AST/TO — Ratio Asistencias/Pérdidas', formula: 'AST / TOV', desc: 'Cuántas asistencias da por cada pérdida. Un ratio superior a 2 es bueno; superior a 3 es excelente. Si no tiene pérdidas el ratio no se puede calcular y se muestra “—”.' },
                   { label: 'TOV% — Turnover Percentage', formula: '100 × TOV / (FGA + 0.44×FTA + TOV)', desc: 'Porcentaje de posesiones individuales que acaban en pérdida. Por debajo del 12% es bueno.' },
                 ]},
                 { grupo: 'Rebote', items: [
-                  { label: 'REB% — Rebound Percentage', formula: '100 × (REB × TmMin/5) / (Min × (TmREB + OppREB))', desc: 'Porcentaje de rebotes disponibles que captura el jugador mientras está en pista.' },
-                  { label: 'OREB% — Offensive Rebound %', formula: 'Igual que REB% pero solo rebotes ofensivos', desc: 'Indica qué tan activo es el jugador en la búsqueda de segundas opciones ofensivas.' },
-                  { label: 'DREB% — Defensive Rebound %', formula: 'Igual que REB% pero solo rebotes defensivos', desc: 'Un pívot de élite suele estar entre 20-30%.' },
+                  { label: 'REB% — Rebound Percentage', formula: '100 × (REB × TmMin/5) / (Min × rebotes disponibles)', desc: 'Porcentaje de los rebotes disponibles que captura el jugador mientras está en pista. No se guardan los rebotes del rival, así que los disponibles se estiman a partir de los tiros fallados de cada equipo: es una estimación, no un dato exacto.' },
+                  { label: 'OREB% — Offensive Rebound %', formula: '100 × (RO × TmMin/5) / (Min × (RO equipo + RD rival))', desc: 'Porcentaje de los rebotes ofensivos disponibles (los tiros que falla Unicaja) que captura el jugador. Indica qué tan activo es en la búsqueda de segundas opciones. Los rebotes disponibles se estiman a partir de los tiros fallados.' },
+                  { label: 'DREB% — Defensive Rebound %', formula: '100 × (RD × TmMin/5) / (Min × (RD equipo + RO rival))', desc: 'Porcentaje de los rebotes defensivos disponibles (los tiros que falla el rival) que captura el jugador. Un pívot de élite suele estar entre 20-30%. Los rebotes disponibles se estiman a partir de los tiros fallados.' },
                 ]},
                 { grupo: 'Faltas y disciplina', items: [
                   { label: 'FP/40 — Faltas personales por 40 min', formula: 'FP / Minutos × 40', desc: 'Ritmo de faltas normalizado a 40 minutos, para comparar jugadores con distinto tiempo de juego. Un valor alto puede indicar un defensor agresivo o con problemas de disciplina; en pívots interiores suele ser algo más alto que en exteriores.' },
                 ]},
                 { grupo: 'Peso en el equipo', items: [
-                  { label: 'APORT% — % Aportación al equipo', formula: '100 × (PTS+REB+AST+ROB+TAP jugador) / (PTS+REB+AST+ROB+TAP equipo)', desc: 'Qué parte de la producción total del equipo (puntos, rebotes, asistencias, robos y tapones sumados) pone este jugador. Usa los totales reales del equipo en los partidos que jugó, no una estimación. Cuanto más alto, más peso tiene en el juego del equipo.' },
+                  { label: 'APORT% — % Aportación al equipo', formula: '100 × (PTS+REB+AST+REC+TAP jugador) / (PTS+REB+AST+REC+TAP equipo)', desc: 'Qué parte de la producción total del equipo (puntos, rebotes, asistencias, recuperaciones y tapones sumados) pone este jugador. Usa los totales reales del equipo en los partidos que jugó, no una estimación. Cuanto más alto, más peso tiene en el juego del equipo.' },
                   { label: 'MIN% — % Minutos del equipo', formula: '100 × Minutos jugador / Minutos totales del equipo', desc: 'Qué parte de los minutos totales disponibles (los de los 5 jugadores en pista sumados) se lleva este jugador. Indica cuánta confianza/rol tiene dentro de la rotación.' },
                 ]},
                 { grupo: 'Ratings y eficiencia global', items: [
-                  { label: 'PER — Player Efficiency Rating', formula: 'Fórmula Hollinger completa normalizada a media 15', desc: 'La métrica histórica de Hollinger. Intenta resumir toda la contribución de un jugador en un solo número. Media de liga = 15. Por encima de 20 es All-Star, por encima de 25 es MVP.' },
+                  { label: 'PER — Player Efficiency Rating', formula: 'Adaptación de la fórmula de Hollinger con constantes de liga aproximadas, normalizada a media 15', desc: 'La métrica histórica de Hollinger: intenta resumir toda la contribución de un jugador en un solo número. En la NBA la media es 15 y por encima de 20 es nivel All-Star. Aquí es una adaptación aproximada (constantes de liga estimadas y sin ajuste de ritmo), así que sirve más para comparar jugadores del equipo que como valor absoluto.' },
                   { label: 'ORTG — Offensive Rating', formula: 'Puntos producidos individuales / posesiones × 100', desc: 'Puntos que produce el jugador por cada 100 posesiones individuales. La media de liga está en torno a 105.' },
-                  { label: 'DRTG — Defensive Rating', formula: 'Estimación basada en stops individuales (robos, tapones, rebotes defensivos)', desc: 'Puntos que permite el jugador por cada 100 posesiones mientras está en pista. Cuanto más bajo, mejor defensor.' },
+                  { label: 'DRTG — Defensive Rating', formula: 'DRTG del equipo (puntos del rival / posesiones propias × 100, en la media de sus partidos) ajustado por sus stops individuales (recuperaciones, tapones, rebotes defensivos)', desc: 'Estimación de los puntos que permite el equipo por cada 100 posesiones, ajustada según la aportación defensiva individual del jugador. Es una aproximación: sin datos de lo que pasa en pista cuando está o no el jugador, las diferencias entre jugadores son pequeñas. Cuanto más bajo, mejor.' },
                   { label: 'NRTG — Net Rating', formula: 'ORTG − DRTG', desc: 'Diferencia entre rating ofensivo y defensivo. El indicador más claro del impacto neto del jugador. Por encima de +5 es excelente.' },
-                  { label: 'BPM — Box Plus/Minus', formula: 'Coeficientes Myers aplicados a stats por 36 min', desc: 'Estima cuántos puntos por cada 100 posesiones aporta el jugador por encima de un jugador de liga media. 0 = jugador promedio, +5 = All-Star, +8 = MVP.' },
+                  { label: 'BPM — Box Plus/Minus', formula: 'Coeficientes simplificados tipo Myers aplicados a stats por 36 min', desc: 'Estima cuántos puntos por cada 100 posesiones aporta el jugador respecto a uno de nivel medio. Referencia NBA: 0 = jugador promedio, +5 = All-Star, +8 = MVP. Es una versión simplificada (sin ajustes por posición ni rol), por lo que esas escalas son orientativas.' },
                 ]},
                 { grupo: 'Win Shares', items: [
-                  { label: 'WS — Win Shares', formula: 'Basado en puntos producidos y stops individuales (Oliver)', desc: 'Estimación de victorias que ha aportado el jugador al equipo. Un buen titular suele aportar 5-8 WS por temporada.' },
+                  { label: 'WS — Win Shares', formula: 'Basado en puntos producidos y stops individuales (Oliver)', desc: 'Estimación de victorias que aporta el jugador al equipo. Se calcula con las medias por partido, así que es un valor por partido (no un acumulado de temporada) y sirve para comparar jugadores entre sí.' },
                   { label: 'OWS — Offensive Win Shares', formula: 'Parte ofensiva de las WS, basada en puntos producidos por encima del margen de posesión', desc: 'Cuánto de esas victorias aportadas viene de la anotación y creación de juego del jugador.' },
-                  { label: 'DWS — Defensive Win Shares', formula: 'Parte defensiva de las WS, basada en robos, tapones y rebotes defensivos', desc: 'Cuánto de esas victorias aportadas viene de la contribución defensiva del jugador (robos, tapones, rebotes defensivos), en vez de la anotación.' },
-                  { label: 'WS/40 — Win Shares por 40 min', formula: 'WS / Minutos × 40', desc: 'WS normalizado a 40 minutos para comparar jugadores con distinto tiempo de juego. Media de liga ≈ 0.100. Por encima de 0.200 es excelente.' },
+                  { label: 'DWS — Defensive Win Shares', formula: 'Parte defensiva de las WS, basada en recuperaciones, tapones y rebotes defensivos', desc: 'Cuánto de esas victorias aportadas viene de la contribución defensiva del jugador (recuperaciones, tapones, rebotes defensivos), en vez de la anotación.' },
+                  { label: 'WS/40 — Win Shares por 40 min', formula: 'WS / Minutos × 40', desc: 'WS normalizado a 40 minutos para comparar jugadores con distinto tiempo de juego. Úsalo para comparar dentro de la plantilla: las referencias de la NBA (media ≈ 0.100) no son exactas para esta versión.' },
                 ]},
                 { grupo: 'Métricas de impacto (aproximadas)', items: [
-                  { label: 'EPM — Estimated Plus/Minus', formula: 'Coeficientes públicos dunksandthrees.com aplicados a stats por posesión', desc: 'Aproximación al RPM/RAPM usando solo box score. Divide en OEPM (ofensivo) y DEPM (defensivo). Las métricas reales requieren datos de tracking que no tenemos.' },
+                  { label: 'EPM — Estimated Plus/Minus', formula: 'Coeficientes aproximados inspirados en el EPM de dunksandthrees.com, aplicados a stats por 100 posesiones', desc: 'Aproximación al RPM/RAPM usando solo box score. Se divide en OEPM (ofensivo) y DEPM (defensivo). Las métricas reales requieren datos de tracking que no tenemos, y los coeficientes de esta versión son aproximados.' },
                   { label: 'RAPTOR (aprox.)', formula: 'Combinación de BPM con ajuste de eficiencia y rol (FiveThirtyEight adaptado)', desc: 'Aproximación a la métrica de FiveThirtyEight. El RAPTOR real usa datos de cámara de seguimiento; esta versión es una estimación box-score. Divide en ORAPTOR y DRAPTOR.' },
                   { label: 'LEBRON (aprox.)', formula: '0.55×BPM + 0.35×EPM + 0.10×PER_ajustado', desc: 'Aproximación a la métrica de BBall-Index. El LEBRON real combina RAPM con arquetipos de rol; esta versión pondera las tres principales métricas de impacto disponibles.' },
-                  { label: 'DPM (aprox.) — darko.app', formula: '0.6×EPM + 0.4×(+/- real por 36 min, ponderando más los partidos recientes)', desc: 'Aproximación al Daily Plus-Minus de la web darko.app. El DPM real es un modelo bayesiano (filtro de Kalman) que combina box score con +/- de toda la liga ajustado por rivales y compañeros, actualizado día a día dando más peso a lo reciente. Al no disponer de los datos completos de la ACB, así que esta versión combina el impacto de caja (EPM) con el +/- real de cada partido, dando algo más de peso a los partidos más recientes.' },
+                  { label: 'DPM (aprox.) — darko.app', formula: '0.6×EPM + 0.4×(+/- real por 36 min, ponderando más los partidos recientes)', desc: 'Aproximación al Daily Plus-Minus de la web darko.app. El DPM real es un modelo bayesiano (filtro de Kalman) que combina box score con +/- de toda la liga ajustado por rivales y compañeros, actualizado día a día dando más peso a lo reciente. Como no disponemos de los datos completos de la ACB, esta versión combina el impacto de caja (EPM) con el +/- real de cada partido, dando algo más de peso a los partidos más recientes.' },
                 ]},
                 { grupo: 'Métricas de seguimiento', items: [
-                  { label: 'TEND — Tendencia VAL', formula: 'Media de valoración ACB de los últimos 5 partidos', desc: 'Indica si el jugador está en buena o mala racha reciente. Si la tendencia supera la media de temporada, el jugador está en forma.' },
+                  { label: 'TEND — Tendencia VAL', formula: 'Media de la valoración (VAL) de los últimos 5 partidos', desc: 'Indica si el jugador está en buena o mala racha reciente. Si la tendencia supera la media de temporada, el jugador está en forma.' },
                   { label: 'DD / TD — Dobles-dobles / Triples-dobles', formula: 'Partidos con ≥10 en 2 ó 3 categorías (PTS, REB, AST, REC, TAP)', desc: 'Contador acumulado de actuaciones destacadas en la temporada.' },
                   { label: 'V% TIT / V% SUP — % Victorias como titular / suplente', formula: 'Partidos ganados jugando de titular (o de suplente) / total de partidos en ese rol × 100', desc: 'Compara si el equipo gana más cuando este jugador sale de inicio o cuando entra desde el banquillo. Dato exacto, cruza cada partido con su resultado real.' },
+                ]},
+                { grupo: 'Datos que no registra la BCL', items: [
+                  { label: 'MAT, FR y TR — Mates, faltas recibidas y tapones recibidos', formula: 'Media solo sobre los partidos que tienen el dato', desc: 'La BCL no incluye estos datos en su box score. En la ficha del jugador, la media de MAT y FR se calcula únicamente con los partidos en los que sí se registran, sin contar los de BCL como 0. Ninguna métrica avanzada de esta página los utiliza, así que no les afecta.' },
                 ]},
               ].map(grupo => (
                 <div key={grupo.grupo} className="card">

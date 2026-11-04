@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { parseCalendarText } from '../../lib/calendarioParser'
+import { parseCalendarText } from '../../lib/calendario'
 import { parseICS } from '../../lib/icsParser'
 import toast from 'react-hot-toast'
 

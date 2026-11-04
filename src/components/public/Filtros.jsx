@@ -26,7 +26,7 @@ export default function FiltrosBar({
 }) {
   const location = useLocation()
   const esComparador = location.pathname.startsWith('/comparador')
-  const esEquipo = location.pathname.startsWith('/equipo')
+  const esEquipo = location.pathname.startsWith('/equipo') || location.pathname.startsWith('/quintetos')
 
   const badgeComp = (nombre) => {
     const map = { ACB: 'acb', BCL: 'bcl', 'Copa del Rey': 'copa', Supercopa: 'super', Intercontinental: 'inter' }

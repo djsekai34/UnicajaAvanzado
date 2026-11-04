@@ -155,30 +155,50 @@ export function calcASTPct(p, team) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-//  5. REB% — Rebound Percentage
-//     Fórmula: 100 * (REB * TmMP/5) / (MP * (TmREB + OppREB))
-//  Sin opp data: estimación asumiendo simetría defensiva
+//  5. REB% / OREB% / DREB% — Rebound Percentage
+//     Fórmula: 100 * (REB * (TmMP/5)) / (MP * rebotes_disponibles)
+//     TmMP = minutos TOTALES del equipo en el partido (≈200), no los del jugador.
+//
+//     No se guardan los rebotes del rival, así que los rebotes disponibles se
+//     sacan de los tiros fallados (cada fallo acaba en un rebote):
+//       - Rebotes tras fallo de Unicaja (RO propio + RD rival):
+//           FGA - FGM + 0.44 * (TLI - TLA)
+//       - Rebotes tras fallo del rival (RD propio + RO rival):
+//           RD propios / DRB% de liga
+//     OREB% usa los primeros, DREB% los segundos y REB% la suma de ambos.
+//     Es una estimación (faltan los datos reales del rival), pero la fórmula
+//     ya es la correcta.
 // ────────────────────────────────────────────────────────────────────────────
 export function calcREBPct(p, team) {
-  return _rebPct(p.rt || 0, p.min, team ? team.rt : null, p.min)
+  const c = _rebOportunidades(team)
+  return _rebPct(p.rt || 0, p.min, team, c ? c.tmFallos + c.rivFallos : null)
 }
 export function calcOREBPct(p, team) {
-  return _rebPct(p.ro || 0, p.min, team ? team.ro : null, p.min)
+  const c = _rebOportunidades(team)
+  return _rebPct(p.ro || 0, p.min, team, c ? c.tmFallos : null)
 }
 export function calcDREBPct(p, team) {
-  return _rebPct(p.rd || 0, p.min, team ? team.rd : null, p.min)
+  const c = _rebOportunidades(team)
+  return _rebPct(p.rd || 0, p.min, team, c ? c.rivFallos : null)
 }
 
-function _rebPct(reb, mp, tmReb, playerMP) {
+function _rebOportunidades(team) {
+  if (!team || !(team.min > 0)) return null
+  const fga = (team.t2_intentos || 0) + (team.t3_intentos || 0)
+  const fgm = (team.t2_anotados || 0) + (team.t3_anotados || 0)
+  const tlFallados = Math.max((team.tl_intentos || 0) - (team.tl_anotados || 0), 0)
+  const tmFallos = Math.max(fga - fgm + 0.44 * tlFallados, team.ro || 0)
+  const rivFallos = (team.rd || 0) / LG.DRB_PCT
+  if (tmFallos <= 0 || rivFallos <= 0) return null
+  return { tmFallos, rivFallos }
+}
+
+function _rebPct(reb, mp, team, disponibles) {
   if (!mp || mp === 0) return null
-  if (tmReb && tmReb > 0) {
-    // Estimación: asumimos opp rebounds ≈ tmReb (simetría)
-    const oppREB = tmReb
-    const denom = playerMP * (tmReb + oppREB)
-    if (denom === 0) return null
-    return round(100 * (reb * (mp / 5)) / denom, 1)
+  if (team && team.min > 0 && disponibles > 0) {
+    return round(100 * (reb * (team.min / 5)) / (mp * disponibles), 1)
   }
-  // Sin datos de equipo
+  // Sin datos de equipo: estimación con las constantes de liga
   const possMin = mp / LG.GAME_MINUTES
   const estAvailReb = possMin * LG.PACE * (1 - LG.FG_PCT) * 2
   return round(Math.min(100 * reb / Math.max(estAvailReb, 1), 35), 1)
@@ -204,9 +224,9 @@ export function calcTOVPct(p) {
 export function calcASTTO(p) {
   const ast = p.as_ || 0
   const tov = p.per || 0
-  // Sin pérdidas: mostramos las asistencias directamente con símbolo ∞
-  // pero numéricamente limitamos a las AST para no distorsionar
-  if (tov === 0) return ast > 0 ? ast : null
+  // Sin pérdidas el ratio no está definido (dividir entre 0): no se muestra
+  // un número inventado, sale "—".
+  if (tov === 0) return null
   return round(ast / tov, 2)
 }
 
@@ -354,6 +374,19 @@ export function calcDRTG(p, team, puntosRival) {
   const adjFactor = 1 - stopPct * 0.15
 
   return round(teamDRTG * adjFactor, 1)
+}
+
+// Media de puntos del rival en los partidos que ha jugado el jugador (los que
+// tienen el marcador rival guardado). Es lo que usa el DRTG como "puntos
+// permitidos por partido", coherente con los totales de equipo que también
+// son la media de esos mismos partidos.
+export function mediaPuntosRival(statsJugador, partidos) {
+  if (!statsJugador?.length || !partidos?.length) return null
+  const porId = Object.fromEntries(partidos.map(p => [p.id, p]))
+  const ids = [...new Set(statsJugador.map(s => s.partido_id))]
+  const valores = ids.map(id => porId[id]?.puntos_rival).filter(v => v != null)
+  if (valores.length === 0) return null
+  return valores.reduce((a, v) => a + v, 0) / valores.length
 }
 
 // ────────────────────────────────────────────────────────────────────────────

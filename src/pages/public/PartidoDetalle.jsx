@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { competicionInfo, formatJornada, datosDesdeSlugPartido, codigoEquipo } from '../../lib/competiciones'
-import { calcTeamTotals, formatMinutos } from '../../lib/advanced'
+import { calcTeamTotals, formatMinutos } from '../../lib/avanzadas'
 import logoUnicaja from '../../assets/Unicaja.png'
 
 function slugify(nombre) {

@@ -9,9 +9,9 @@ import {
   Legend,
 } from "recharts";
 import { usePublicData } from "../../hooks/usePublicData";
-import FiltrosBar from "../../components/public/FiltrosBar";
-import AniversarioBadge from "../../components/public/AniversarioBadge";
-import EquipoRecordCard from "../../components/public/EquipoRecordCard";
+import FiltrosBar from "../../components/public/Filtros";
+import AniversarioBadge from "../../components/public/Aniversario";
+import EquipoRecordCard from "../../components/public/EquipoRecordTarjeta";
 import CapturaBoton from "../../components/public/CapturaBoton";
 
 const COLORS = ["#4E9E47", "#9DC41A", "#5C2D91", "#FFFFFF"];
@@ -185,6 +185,11 @@ const METRICAS_CON_SIGNO = new Set([
   "dpm",
 ]);
 
+// Métricas donde el mejor valor es el más bajo, no el más alto (p.ej. DRTG:
+// menos puntos encajados por 100 posesiones = mejor defensa). La estrellita
+// de "mejor valor" se calcula contra el mínimo en vez del máximo para estas.
+const METRICAS_MENOR_ES_MEJOR = new Set(["drtg", "tov_pct"]);
+
 const RADAR_KEYS = ["pts", "rt", "as_", "rec", "tap", "val"];
 const RADAR_LABELS = ["PTS", "REB", "AST", "REC", "TAP", "VAL"];
 
@@ -220,6 +225,7 @@ export default function ComparadorPage() {
   const [seleccionados, setSeleccionados] = useState([]);
   const [vista, setVista] = useState("lista"); // 'lista' | 'cuadricula'
   const cuadriculaRef = useRef(null);
+  const capturaTablaRef = useRef(null);
   const capturaBotonRef = useRef(null);
 
   // Antes de generar la captura, preguntamos con un modal propio si se
@@ -284,7 +290,7 @@ export default function ComparadorPage() {
   const fmtVal = (m, v) => {
     if (v == null) return "—";
     if (m.fmt) return m.fmt(v);
-    return v;
+    return typeof v === "number" ? Math.round(v * 100) / 100 : v;
   };
 
   // Determinar mejor valor en cada métrica
@@ -499,11 +505,18 @@ export default function ComparadorPage() {
               >
                 ▦ Cuadrícula
               </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${vista === "tabla" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setVista("tabla")}
+              >
+                ▤ Tabla
+              </button>
             </div>
-            {/* La captura siempre se saca en formato cuadrícula, aunque
-                ahora mismo estés viendo la lista — displayForzado se
-                encarga de hacerla visible solo mientras se genera la
-                imagen. */}
+            {/* La captura siempre se saca en formato tabla (el mismo que la
+                vista "Tabla"), independientemente de qué vista estés usando
+                ahora mismo — displayForzado se encarga de hacerla visible
+                solo mientras se genera la imagen. */}
             <button
               type="button"
               className="btn btn-captura btn-sm"
@@ -520,7 +533,7 @@ export default function ComparadorPage() {
             </button>
             <CapturaBoton
               ref={capturaBotonRef}
-              targetRef={cuadriculaRef}
+              targetRef={capturaTablaRef}
               displayForzado="block"
               filename="comparativa-unicaja-avanzado"
               mostrarBoton={false}
@@ -570,8 +583,11 @@ export default function ComparadorPage() {
                           range,
                           METRICAS_CON_SIGNO.has(m.key),
                         );
+                        const objetivo = METRICAS_MENOR_ES_MEJOR.has(m.key)
+                          ? minVal
+                          : maxVal;
                         const isBest =
-                          num === maxVal && jugadoresComp.length > 1;
+                          num === objetivo && jugadoresComp.length > 1;
                         return (
                           <div key={d.jugador.id} className="compare-bar-row">
                             <div
@@ -700,8 +716,11 @@ export default function ComparadorPage() {
                           range,
                           METRICAS_CON_SIGNO.has(m.key),
                         );
+                        const objetivo = METRICAS_MENOR_ES_MEJOR.has(m.key)
+                          ? minVal
+                          : maxVal;
                         const isBest =
-                          num === maxVal && jugadoresComp.length > 1;
+                          num === objetivo && jugadoresComp.length > 1;
                         return (
                           <div key={d.jugador.id} className="compare-mini-row">
                             <span
@@ -738,6 +757,113 @@ export default function ComparadorPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Tabla compacta: todas las métricas en filas repartidas en 2
+              columnas y los jugadores en columnas de valores — mucho más
+              compacta que la cuadrícula de tarjetas. Es tanto una vista más
+              (seleccionable con el botón "Tabla") como el formato que
+              siempre se usa para la imagen descargada, esté seleccionada o
+              no ahora mismo — displayForzado la muestra solo mientras se
+              genera la captura si estuviera oculta por no ser la vista
+              activa. */}
+          <div
+            ref={capturaTablaRef}
+            className={`compare-captura-tabla${vista !== "tabla" ? " cv-oculto" : ""}`}
+          >
+            <div className="compare-captura-titulo">
+              <h3>Comparativa — Unicaja Avanzado</h3>
+              {temporadaNombre && <span>{temporadaNombre}</span>}
+            </div>
+            {capturandoUI && mostrarFotosCaptura && (
+              <div className="compare-captura-jugadores">
+                {jugadoresComp.map((d, i) => (
+                  <div key={d.jugador.id} className="compare-captura-jugador">
+                    <div
+                      className="compare-captura-avatar"
+                      style={{ borderColor: COLORS[i] }}
+                    >
+                      {d.jugador.foto_url ? (
+                        <img src={d.jugador.foto_url} alt={d.jugador.nombre} />
+                      ) : (
+                        <span style={{ color: COLORS[i] }}>
+                          #{d.jugador.dorsal}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ color: COLORS[i], fontWeight: 700 }}>
+                      {d.jugador.nombre}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="compare-captura-cols">
+              {[
+                METRICAS_COMP.slice(0, Math.ceil(METRICAS_COMP.length / 2)),
+                METRICAS_COMP.slice(Math.ceil(METRICAS_COMP.length / 2)),
+              ].map((columna, ci) => (
+                <table className="compare-captura-table" key={ci}>
+                  <thead>
+                    <tr>
+                      <th>Métrica</th>
+                      {jugadoresComp.map((d, i) => (
+                        <th key={d.jugador.id} style={{ color: COLORS[i] }}>
+                          {d.jugador.nombre.split(" ")[0]}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {columna.map((m) => {
+                      const vals = jugadoresComp.map((d) => getVal(d, m));
+                      const numVals = vals.map((v) =>
+                        typeof v === "number" ? v : null,
+                      );
+                      const validos = numVals.filter((v) => v != null);
+                      const maxVal = validos.length
+                        ? Math.max(...validos)
+                        : null;
+                      const minVal = validos.length
+                        ? Math.min(...validos)
+                        : null;
+                      const objetivo = METRICAS_MENOR_ES_MEJOR.has(m.key)
+                        ? minVal
+                        : maxVal;
+                      return (
+                        <tr key={m.key}>
+                          <td className="compare-captura-metrica">
+                            {m.label}
+                          </td>
+                          {jugadoresComp.map((d, i) => {
+                            const v = getVal(d, m);
+                            const num = typeof v === "number" ? v : null;
+                            const isBest =
+                              num != null &&
+                              num === objetivo &&
+                              jugadoresComp.length > 1;
+                            return (
+                              <td
+                                key={d.jugador.id}
+                                style={{
+                                  color: isBest
+                                    ? COLORS[i]
+                                    : "var(--gris-300)",
+                                  fontWeight: isBest ? 700 : 500,
+                                }}
+                              >
+                                {fmtVal(m, v)}
+                                {isBest ? " ★" : ""}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ))}
             </div>
           </div>
 

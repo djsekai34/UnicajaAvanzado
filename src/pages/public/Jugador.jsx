@@ -5,9 +5,10 @@ import {
   Tooltip, ResponsiveContainer, ReferenceLine, Legend
 } from 'recharts'
 import { supabase } from '../../lib/supabase'
-import { calcAllAdvanced, calcTeamTotals, formatMinutos, sumarMinutos } from '../../lib/advanced'
-import AniversarioBadge from '../../components/public/AniversarioBadge'
+import { calcAllAdvanced, calcTeamTotals, formatMinutos, sumarMinutos, mediaPuntosRival } from '../../lib/avanzadas'
+import AniversarioBadge from '../../components/public/Aniversario'
 import CapturaBoton from '../../components/public/CapturaBoton'
+import TablaSede from '../../components/public/TablaLV'
 
 const COLORS = ['#4E9E47','#9DC41A','#60A5FA','#F59E0B']
 
@@ -39,27 +40,27 @@ const ADV_METRICS = [
   { key:'ts_pct',    label:'TS%',    desc:'True Shooting %',         fmt: v => v!=null?v+'%':'—',             type:'pct' },
   { key:'efg_pct',   label:'eFG%',   desc:'Effective FG%',           fmt: v => v!=null?v+'%':'—',             type:'pct' },
   { key:'usg_pct',   label:'USG%',   desc:'Usage Rate',              fmt: v => v!=null?v+'%':'—',             type:'pct' },
-  { key:'per',       label:'PER',    desc:'Player Efficiency Rating', fmt: v => v!=null?v:'—',                 type:'rating' },
+  { key:'per',       label:'PER',    desc:'Player Efficiency Rating', fmt: v => v!=null?Math.round(v*100)/100:'—',                 type:'rating' },
   { key:'bpm',       label:'BPM',    desc:'Box Plus/Minus',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
-  { key:'ws',        label:'WS',     desc:'Win Shares',              fmt: v => v!=null?v:'—',                  type:'rating' },
-  { key:'ows',       label:'OWS',    desc:'Offensive Win Shares',    fmt: v => v!=null?v:'—',                  type:'rating' },
-  { key:'dws',       label:'DWS',    desc:'Defensive Win Shares',    fmt: v => v!=null?v:'—',                  type:'rating' },
-  { key:'ws40',      label:'WS/40',  desc:'Win Shares por 40 min',   fmt: v => v!=null?v:'—',                  type:'rating' },
-  { key:'pf40',      label:'FP/40',  desc:'Faltas personales por 40 min', fmt: v => v!=null?v:'—',             type:'rating' },
-  { key:'ortg',      label:'ORTG',   desc:'Offensive Rating',        fmt: v => v!=null?v:'—',                  type:'rating' },
-  { key:'drtg',      label:'DRTG',   desc:'Defensive Rating',        fmt: v => v!=null?v:'—',                  type:'rating' },
+  { key:'ws',        label:'WS',     desc:'Win Shares',              fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
+  { key:'ows',       label:'OWS',    desc:'Offensive Win Shares',    fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
+  { key:'dws',       label:'DWS',    desc:'Defensive Win Shares',    fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
+  { key:'ws40',      label:'WS/40',  desc:'Win Shares por 40 min',   fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
+  { key:'pf40',      label:'FP/40',  desc:'Faltas personales por 40 min', fmt: v => v!=null?Math.round(v*100)/100:'—',             type:'rating' },
+  { key:'ortg',      label:'ORTG',   desc:'Offensive Rating',        fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
+  { key:'drtg',      label:'DRTG',   desc:'Defensive Rating',        fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
   { key:'net_rating',label:'NRTG',   desc:'Net Rating',              fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'ast_pct',   label:'AST%',   desc:'Assist Percentage',       fmt: v => v!=null?v+'%':'—',             type:'pct' },
   { key:'reb_pct',   label:'REB%',   desc:'Rebound Percentage',      fmt: v => v!=null?v+'%':'—',             type:'pct' },
   { key:'oreb_pct',  label:'OREB%',  desc:'Off. Rebound %',          fmt: v => v!=null?v+'%':'—',             type:'pct' },
   { key:'dreb_pct',  label:'DREB%',  desc:'Def. Rebound %',          fmt: v => v!=null?v+'%':'—',             type:'pct' },
   { key:'tov_pct',   label:'TOV%',   desc:'Turnover %',              fmt: v => v!=null?v+'%':'—',             type:'pct' },
-  { key:'ast_to',    label:'AST/TO', desc:'Asistencias/Pérdidas',    fmt: v => v!=null?v:'—',                  type:'rating' },
+  { key:'ast_to',    label:'AST/TO', desc:'Asistencias/Pérdidas',    fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
   { key:'epm',       label:'EPM',    desc:'Estimated Plus/Minus',    fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'raptor',    label:'RAPTOR', desc:'RAPTOR (aprox.)',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'lebron',    label:'LEBRON', desc:'LEBRON (aprox.)',          fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
   { key:'dpm',       label:'DPM',    desc:'DPM (aprox. — darko.app)', fmt: v => v!=null?(v>0?'+':'')+v:'—',    type:'pm' },
-  { key:'tendencia_val', label:'TEND', desc:'Tendencia VAL (últ.5)', fmt: v => v!=null?v:'—',                  type:'rating' },
+  { key:'tendencia_val', label:'TEND', desc:'Tendencia VAL (últ.5)', fmt: v => v!=null?Math.round(v*100)/100:'—',                  type:'rating' },
   { key:'win_pct_titular',  label:'V% TITULAR',  desc:'% de victorias en los partidos que fue titular',  fmt: v => v!=null?v+'%':'—', type:'pct' },
   { key:'win_pct_suplente', label:'V% SUPLENTE', desc:'% de victorias en los partidos que fue suplente', fmt: v => v!=null?v+'%':'—', type:'pct' },
   { key:'aportacion_equipo_pct', label:'APORT% EQUIPO', desc:'% de la producción total del equipo (PTS+REB+AST+ROB+TAP) que pone', fmt: v => v!=null?v+'%':'—', type:'pct' },
@@ -207,14 +208,13 @@ export default function JugadorPage() {
     .map(s => ({ ...s, fecha: partidos.find(p=>p.id===s.partido_id)?.fecha || '' }))
     .sort((a,b) => a.fecha.localeCompare(b.fecha))
 
-  const ultimoPartido = partidos.find(p => p.id === statsOrdenadas[statsOrdenadas.length-1]?.partido_id)
   // Total de minutos del equipo en todos los partidos filtrados (suma real,
   // no media), para el % de minutos del equipo de este jugador.
   const partidoIdsFiltrados = new Set(statsFiltradas.map(s => s.partido_id))
   const minTotalEquipoTemporada = sumarMinutos(
     allStats.filter(s => partidoIdsFiltrados.has(s.partido_id)).map(s => s.min)
   )
-  const advanced = n > 0 ? calcAllAdvanced(avgStats, teamAvg, ultimoPartido?.puntos_rival, statsOrdenadas, partidos, minTotalEquipoTemporada) : {}
+  const advanced = n > 0 ? calcAllAdvanced(avgStats, teamAvg, mediaPuntosRival(statsOrdenadas, partidos), statsOrdenadas, partidos, minTotalEquipoTemporada) : {}
 
   const { dd, td } = advanced.dobles_dobles != null
     ? { dd: advanced.dobles_dobles, td: advanced.triples_dobles }
@@ -238,6 +238,26 @@ export default function JugadorPage() {
     const map = { ACB:'acb', BCL:'bcl', 'Copa del Rey':'copa', Supercopa:'super', Intercontinental:'inter' }
     return `badge badge-${map[nombre]||'acb'}`
   }
+
+  // Local vs visitante (y neutral si lo hay): medias del jugador separadas
+  // por dónde se jugó cada partido. Solo se muestra si hay al menos dos
+  // sedes con partidos, si no no hay nada que comparar.
+  const sedesJugador = ['Local', 'Visitante', 'Neutral'].map(nombre => {
+    const st = statsFiltradas.filter(s => {
+      const p = partidos.find(pp => pp.id === s.partido_id)
+      return (p?.es_local === true ? 'Local' : p?.es_local === false ? 'Visitante' : 'Neutral') === nombre
+    })
+    if (st.length === 0) return null
+    const mm = key => st.reduce((a, s) => a + (s[key] || 0), 0) / st.length
+    const res = st.map(s => partidos.find(pp => pp.id === s.partido_id)).filter(p => p && p.puntos_unicaja != null && p.puntos_rival != null)
+    const v = res.filter(p => p.puntos_unicaja > p.puntos_rival).length
+    return {
+      nombre, n: st.length, v, d: res.length - v,
+      pct: res.length ? rnd((v / res.length) * 100) : null,
+      pts: mm('pts'), rt: mm('rt'), as_: mm('as_'), val: mm('val'), pm: mm('plus_minus'),
+      min: sumarMinutos(st.map(s => s.min)) / st.length,
+    }
+  }).filter(Boolean)
 
   const fmtPct = (m, i) => {
     const pct = i > 0 ? rnd(m/i*100) : null
@@ -404,6 +424,26 @@ export default function JugadorPage() {
                       </div>
                     ))}
                   </div>
+
+                  {sedesJugador.length >= 2 && (
+                    <div className="card" style={{ marginBottom:24 }}>
+                      <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, marginBottom:4 }}>Local vs visitante</h3>
+                      <p style={{ fontSize:12, color:'var(--gris-500)', marginBottom:10 }}>Medias por partido según dónde se jugó. En verde, el mejor registro de cada fila.</p>
+                      <TablaSede
+                        cabeceras={sedesJugador.map(x => x.nombre)}
+                        filas={[
+                          { label:'Partidos', celdas: sedesJugador.map(x => ({ txt: x.n, num: null })) },
+                          { label:'Balance del equipo', celdas: sedesJugador.map(x => ({ txt: x.pct != null ? `${x.v}-${x.d} (${x.pct}%)` : '—', num: x.pct })) },
+                          { label:'Puntos', celdas: sedesJugador.map(x => ({ txt: rnd(x.pts), num: rnd(x.pts) })) },
+                          { label:'Rebotes', celdas: sedesJugador.map(x => ({ txt: rnd(x.rt), num: rnd(x.rt) })) },
+                          { label:'Asistencias', celdas: sedesJugador.map(x => ({ txt: rnd(x.as_), num: rnd(x.as_) })) },
+                          { label:'Valoración', celdas: sedesJugador.map(x => ({ txt: rnd(x.val), num: rnd(x.val) })) },
+                          { label:'+/-', celdas: sedesJugador.map(x => ({ txt: (x.pm > 0 ? '+' : '') + rnd(x.pm), num: rnd(x.pm) })) },
+                          { label:'Minutos', celdas: sedesJugador.map(x => ({ txt: formatMinutos(x.min), num: null })) },
+                        ]}
+                      />
+                    </div>
+                  )}
 
                   <div className="card">
                     <h3 style={{ fontFamily:'var(--font-display)', fontWeight:700, marginBottom:16 }}>Tiros</h3>

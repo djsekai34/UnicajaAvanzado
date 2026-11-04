@@ -60,6 +60,14 @@ export default function PublicLayout() {
             Equipo
           </NavLink>
           <NavLink
+            to="/quintetos"
+            className={({ isActive }) =>
+              `pub-nav-link${isActive ? " active" : ""}`
+            }
+          >
+            Quintetos
+          </NavLink>
+          <NavLink
             to="/calendario"
             className={({ isActive }) =>
               `pub-nav-link${isActive ? " active" : ""}`

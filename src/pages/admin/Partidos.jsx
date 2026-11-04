@@ -162,10 +162,8 @@ export default function Partidos() {
               <tr>
                 <th>Fecha</th>
                 <th className="col-sticky">Rival</th>
-                <th>Competición</th>
-                <th>Condición</th>
+                <th>Competición · Sede</th>
                 <th>Resultado</th>
-                <th>Stats</th>
                 <th className="col-sticky-right"></th>
               </tr>
             </thead>
@@ -176,17 +174,19 @@ export default function Partidos() {
                     {new Date(p.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
                   <td className="col-sticky" style={{ fontWeight: 600, color: 'var(--blanco)' }}>{p.rival}</td>
-                  <td><span className={badgeClass(p.competiciones?.nombre)}>{p.competiciones?.nombre}</span></td>
-                  <td><span className={`badge ${p.es_local === null ? 'badge-neutral' : p.es_local ? 'badge-local' : 'badge-visit'}`}>{p.es_local === null ? 'Sede neutra' : p.es_local ? 'Local' : 'Visitante'}</span></td>
-                  <td>{resultado(p)}</td>
                   <td>
-                    <Link to={`/admin/partidos/${p.id}/stats`} className="btn btn-lima btn-sm">
-                      Meter stats
-                    </Link>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <span className={badgeClass(p.competiciones?.nombre)}>{p.competiciones?.nombre}</span>
+                      <span className={`badge ${p.es_local === null ? 'badge-neutral' : p.es_local ? 'badge-local' : 'badge-visit'}`}>{p.es_local === null ? 'Sede neutra' : p.es_local ? 'Local' : 'Visitante'}</span>
+                    </div>
                   </td>
-                  <td className="col-sticky-right" style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>Editar</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}>Borrar</button>
+                  <td>{resultado(p)}</td>
+                  <td className="col-sticky-right">
+                    <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                      <Link to={`/admin/partidos/${p.id}/stats`} className="btn btn-lima btn-sm">Meter stats</Link>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>Editar</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}>Borrar</button>
+                    </div>
                   </td>
                 </tr>
               ))}

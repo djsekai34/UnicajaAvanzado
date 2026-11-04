@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import AniversarioBadge from '../../components/public/AniversarioBadge'
+import AniversarioBadge from '../../components/public/Aniversario'
 import { competicionInfo, formatJornada, generarSlugPartido } from '../../lib/competiciones'
 
 const RECINTO_LOCAL = 'Palacio de los Deportes José María Martín Carpena'

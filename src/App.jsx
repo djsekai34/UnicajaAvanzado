@@ -13,13 +13,14 @@ import EscudosEquipos from "./pages/admin/EscudosEquipos";
 import IconoPagina from "./pages/admin/IconoPagina";
 import StatsPartido from "./pages/admin/StatsPartido";
 import Temporadas from "./pages/admin/Temporadas";
-import EstadisticasPage from "./pages/public/EstadisticasPage";
-import JugadorPage from "./pages/public/JugadorPage";
-import ComparadorPage from "./pages/public/ComparadorPage";
-import EquipoPage from "./pages/public/EquipoPage";
-import CalendarioPage from "./pages/public/CalendarioPage";
-import PartidoDetallePage from "./pages/public/PartidoDetallePage";
-import SobreMiPage from "./pages/public/SobreMiPage";
+import EstadisticasPage from "./pages/public/Estadisticas";
+import JugadorPage from "./pages/public/Jugador";
+import ComparadorPage from "./pages/public/Comparador";
+import EquipoPage from "./pages/public/Equipo";
+import QuintetosPage from "./pages/public/Quintetos";
+import CalendarioPage from "./pages/public/Calendario";
+import PartidoDetallePage from "./pages/public/PartidoDetalle";
+import SobreMiPage from "./pages/public/SobreMi";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
         <Route index element={<EstadisticasPage />} />
         <Route path="comparador" element={<ComparadorPage />} />
         <Route path="equipo" element={<EquipoPage />} />
+        <Route path="quintetos" element={<QuintetosPage />} />
         <Route path="calendario" element={<CalendarioPage />} />
         <Route path="partido/:slug" element={<PartidoDetallePage />} />
         <Route path=":slug" element={<JugadorPage />} />

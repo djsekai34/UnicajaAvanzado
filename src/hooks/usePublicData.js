@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import { calcAllAdvanced, calcTeamTotals, sumarMinutos } from '../lib/advanced'
+import { calcAllAdvanced, calcTeamTotals, sumarMinutos, mediaPuntosRival } from '../lib/avanzadas'
 
 export function usePublicData() {
   const [temporadas, setTemporadas]     = useState([])
@@ -164,10 +164,8 @@ export function usePublicData() {
         fp: avg('fp'), fr: avg('fr'), plus_minus: avg('plus_minus'), val: avg('val'),
       }
 
-      // Partido rival más reciente para DRTG
-      const ultimoPartidoId = stats[stats.length - 1]?.partido_id
-      const ultimoPartido = partidos.find(p => p.id === ultimoPartidoId)
-      const puntosRival = ultimoPartido?.puntos_rival
+      // Media de puntos del rival en los partidos del jugador (para el DRTG)
+      const puntosRival = mediaPuntosRival(stats, partidos)
 
       const advanced = calcAllAdvanced(avgStats, teamAvg, puntosRival, stats, partidos, minTotalEquipoTemporada)
 

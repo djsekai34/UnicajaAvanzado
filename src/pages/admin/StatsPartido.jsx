@@ -60,6 +60,17 @@ const CAMPOS = [
 // registra" y las medias de la ficha del jugador no se desvirtúan.
 const CAMPOS_SIN_BCL = ['tr', 'mat', 'fr']
 
+// En BCL solo se piden los campos de su box score, y en el mismo orden en
+// que aparecen allí, para meter los datos de corrido sin saltar de un campo
+// a otro. Los puntos se ven igual que en ACB, pero no se escriben: se calculan solos de los tiros anotados.
+const CAMPOS_BCL_ORDEN = [
+  'min', 'pts',
+  't2_anotados', 't2_intentos',
+  't3_anotados', 't3_intentos',
+  'tl_anotados', 'tl_intentos',
+  'ro', 'rd', 'as_', 'fp', 'per', 'rec', 'tap', 'plus_minus', 'val',
+]
+
 const emptyStats = () => Object.fromEntries(CAMPOS.map(c => [c.key, '']))
 
 // Motivos posibles cuando un jugador convocado/de la plantilla NO juega un
@@ -441,9 +452,11 @@ export default function StatsPartido() {
                         {s.plus_minus != null ? (s.plus_minus > 0 ? `+${s.plus_minus}` : s.plus_minus) : '—'}
                       </td>
                       <td style={{ color: 'var(--lima)', fontWeight: 700 }}>{s.val ?? '—'}</td>
-                      <td className="col-sticky-right" style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(j)}>Editar</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(j.id)}>×</button>
+                      <td className="col-sticky-right">
+                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(j)}>Editar</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(j.id)}>×</button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -569,11 +582,11 @@ export default function StatsPartido() {
                 {/* Grid de inputs */}
                 {esBCL && (
                   <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--gris-500)' }}>
-                    BCL no registra TR, MAT ni FR en su box score, por eso no se piden aquí.
+                    En BCL solo se piden los campos de su box score, en su mismo orden (los puntos salen solos de los tiros).
                   </div>
                 )}
                 <div className="stats-input-grid">
-                  {CAMPOS.filter(c => !(esBCL && CAMPOS_SIN_BCL.includes(c.key))).map(c => (
+                  {(esBCL ? CAMPOS_BCL_ORDEN.map(k => CAMPOS.find(c => c.key === k)) : CAMPOS).map(c => (
                     <div key={c.key} className="form-group">
                       <label>
                         {c.label}

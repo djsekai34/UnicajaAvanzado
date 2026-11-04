@@ -2,11 +2,12 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { usePublicData } from '../../hooks/usePublicData'
-import { calcTeamTotals } from '../../lib/advanced'
-import FiltrosBar from '../../components/public/FiltrosBar'
-import AniversarioBadge from '../../components/public/AniversarioBadge'
-import EquipoRecordCard from '../../components/public/EquipoRecordCard'
+import { calcTeamTotals } from '../../lib/avanzadas'
+import FiltrosBar from '../../components/public/Filtros'
+import AniversarioBadge from '../../components/public/Aniversario'
+import EquipoRecordCard from '../../components/public/EquipoRecordTarjeta'
 import CapturaBoton from '../../components/public/CapturaBoton'
+import TablaSede from '../../components/public/TablaLV'
 import trofeoACB from '../../assets/titulos/acb.png'
 import trofeoBCL from '../../assets/titulos/bcl.png'
 import trofeoCopa from '../../assets/titulos/copa.png'
@@ -90,6 +91,43 @@ export default function EquipoPage() {
     [data.statsFiltradas]
   )
   const media = key => numPartidosConStats > 0 ? totales[key] / numPartidosConStats : 0
+
+  // Puntos encajados: no viene de las stats de jugadores, sino del marcador
+  // del rival guardado en cada partido (puntos_rival).
+  const partidosConRival = useMemo(
+    () => partidosFiltrados.filter(p => p.puntos_rival != null),
+    [partidosFiltrados]
+  )
+  const totalPuntosEncajados = partidosConRival.reduce((acc, p) => acc + p.puntos_rival, 0)
+  const mediaPuntosEncajados = partidosConRival.length > 0 ? totalPuntosEncajados / partidosConRival.length : null
+
+  // Local vs visitante (y sede neutra si la hay): mismas medias del equipo
+  // pero separadas por dónde se jugó el partido.
+  const sedes = useMemo(() => {
+    const grupos = { Local: [], Visitante: [], Neutral: [] }
+    partidosFiltrados.forEach(p => {
+      grupos[p.es_local === true ? 'Local' : p.es_local === false ? 'Visitante' : 'Neutral'].push(p)
+    })
+    return ['Local', 'Visitante', 'Neutral'].map(nombre => {
+      const ps = grupos[nombre]
+      const ids = new Set(ps.map(p => p.id))
+      const st = data.statsFiltradas.filter(s => ids.has(s.partido_id))
+      const conStats = new Set(st.map(s => s.partido_id)).size
+      const tot = calcTeamTotals(st)
+      const m = key => conStats > 0 ? tot[key] / conStats : null
+      const jug = ps.filter(p => p.puntos_unicaja != null && p.puntos_rival != null)
+      if (conStats === 0 && jug.length === 0) return null
+      const v = jug.filter(p => p.puntos_unicaja > p.puntos_rival).length
+      const pf = jug.length ? jug.reduce((a, p) => a + p.puntos_unicaja, 0) / jug.length : null
+      const pc = jug.length ? jug.reduce((a, p) => a + p.puntos_rival, 0) / jug.length : null
+      return {
+        nombre, partidos: Math.max(conStats, jug.length),
+        v, d: jug.length - v, winPct: jug.length ? rnd((v / jug.length) * 100) : null,
+        pts: m('pts'), pc, margen: pf != null ? pf - pc : null,
+        rt: m('rt'), as_: m('as_'), per: m('per'), val: m('val'),
+      }
+    }).filter(Boolean)
+  }, [partidosFiltrados, data.statsFiltradas])
 
   const tcIntentos = totales.t2_intentos + totales.t3_intentos
   const tcpct = tcIntentos > 0 ? rnd(((totales.t2_anotados + totales.t3_anotados) / tcIntentos) * 100) : null
@@ -176,6 +214,7 @@ export default function EquipoPage() {
           <div className="stat-grid">
             {[
               { label: 'Puntos', value: rnd(media('pts')), total: rnd(totales.pts), accent: true },
+              { label: 'Puntos encajados', value: rnd(mediaPuntosEncajados), total: rnd(totalPuntosEncajados) },
               { label: 'Rebotes', value: rnd(media('rt')), total: rnd(totales.rt) },
               { label: 'Asistencias', value: rnd(media('as_')), total: rnd(totales.as_) },
               { label: 'Recuperaciones', value: rnd(media('rec')), total: rnd(totales.rec) },
@@ -215,6 +254,31 @@ export default function EquipoPage() {
               <div className="adv-value pct">{tlpct != null ? tlpct + '%' : '—'}</div>
             </div>
           </div>
+
+          {/* ── LOCAL VS VISITANTE ── */}
+          {sedes.length >= 2 && (
+            <>
+              <div style={{ marginTop: 8, marginBottom: 16, padding: '12px 16px', background: 'var(--gris-800)', borderLeft: '3px solid #60A5FA', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--gris-400)', lineHeight: 1.6 }}>
+                <span style={{ color: 'var(--blanco)', fontWeight: 700 }}>Local vs visitante</span> — las medias del equipo separadas según dónde se jugó el partido. En verde, el mejor registro de cada fila.
+              </div>
+              <div className="card" style={{ marginBottom: 28 }}>
+                <TablaSede
+                  cabeceras={sedes.map(x => x.nombre)}
+                  filas={[
+                    { label: 'Partidos', celdas: sedes.map(x => ({ txt: x.partidos, num: null })) },
+                    { label: 'Balance', celdas: sedes.map(x => ({ txt: x.winPct != null ? `${x.v}-${x.d} (${x.winPct}%)` : '—', num: x.winPct })) },
+                    { label: 'Puntos', celdas: sedes.map(x => ({ txt: x.pts != null ? rnd(x.pts) : '—', num: x.pts != null ? rnd(x.pts) : null })) },
+                    { label: 'Puntos encajados', menorEsMejor: true, celdas: sedes.map(x => ({ txt: x.pc != null ? rnd(x.pc) : '—', num: x.pc != null ? rnd(x.pc) : null })) },
+                    { label: 'Margen', celdas: sedes.map(x => ({ txt: x.margen != null ? (x.margen > 0 ? '+' : '') + rnd(x.margen) : '—', num: x.margen != null ? rnd(x.margen) : null })) },
+                    { label: 'Rebotes', celdas: sedes.map(x => ({ txt: x.rt != null ? rnd(x.rt) : '—', num: x.rt != null ? rnd(x.rt) : null })) },
+                    { label: 'Asistencias', celdas: sedes.map(x => ({ txt: x.as_ != null ? rnd(x.as_) : '—', num: x.as_ != null ? rnd(x.as_) : null })) },
+                    { label: 'Pérdidas', menorEsMejor: true, celdas: sedes.map(x => ({ txt: x.per != null ? rnd(x.per) : '—', num: x.per != null ? rnd(x.per) : null })) },
+                    { label: 'Valoración', celdas: sedes.map(x => ({ txt: x.val != null ? rnd(x.val) : '—', num: x.val != null ? rnd(x.val) : null })) },
+                  ]}
+                />
+              </div>
+            </>
+          )}
 
           {/* ── TÍTULOS ── */}
           {data.competiciones.length > 0 && (
